@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "iii_classic_axis", "project_files\iii_classic_axis.vcxproj", "{F06304EA-7F31-4175-98E4-B765684214FF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vc_classic_axis", "project_files\vc_classic_axis.vcxproj", "{96BB801F-1E67-4631-ACA6-554361531FCF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F06304EA-7F31-4175-98E4-B765684214FF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F06304EA-7F31-4175-98E4-B765684214FF}.Debug|Win32.Build.0 = Debug|Win32
+		{F06304EA-7F31-4175-98E4-B765684214FF}.Release|Win32.ActiveCfg = Release|Win32
+		{F06304EA-7F31-4175-98E4-B765684214FF}.Release|Win32.Build.0 = Release|Win32
+		{96BB801F-1E67-4631-ACA6-554361531FCF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{96BB801F-1E67-4631-ACA6-554361531FCF}.Debug|Win32.Build.0 = Debug|Win32
+		{96BB801F-1E67-4631-ACA6-554361531FCF}.Release|Win32.ActiveCfg = Release|Win32
+		{96BB801F-1E67-4631-ACA6-554361531FCF}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {52434BBE-34F7-413D-AD19-DD5281E2F649}
+	EndGlobalSection
+EndGlobal
