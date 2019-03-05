@@ -120,8 +120,7 @@ public:
 	void ProcessSpecialHeightRoutines();
 	void ProcessFollowPedClassic(CVector const & target, float targetOrient, int a4, int a5);
 	void ProcessCamOnAString(CVector const & target, float targetOrient, int a4, int a5);
-	void PrepareBodyParts(bool reset);
-	void Cam_On_A_String_Unobscured(CVector const & target, float distval);
+	void CamOnAStringUnobscured(CVector const & target, float distval);
 	void WorkOutCamHeight(CVector const & target, float targetOrientation, float targetHeight);
 	char RotCamIfInFrontCar(CVector const & target, float targetOrientation);
 	char FixCamIfObscured(CVector const & targetCoors, float z, float targetOrientation);

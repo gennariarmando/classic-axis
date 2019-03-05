@@ -149,14 +149,14 @@ int CPad::GetLookUpDown() {
 	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return pXboxPad->HasPadInHands() ? (Pads->NewState.RightStickY * 0.05f) : 0 - ((CPad::NewMouseControllerState.Y * 0.5f) * (TheCamera.m_fMouseAccelHorzntl * 260.0f));
+	return 0;
 }
 
 int CPad::GetLookLeftRight() {
 	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return pXboxPad->HasPadInHands() ? (Pads->NewState.RightStickX * 0.05f) : 0 + ((CPad::NewMouseControllerState.X * 0.5f)* (TheCamera.m_fMouseAccelHorzntl * 260.0f));
+	return 0;
 }
 
 int CMousePointerStateHelper::GetMouseSetUp() {
@@ -164,7 +164,7 @@ int CMousePointerStateHelper::GetMouseSetUp() {
 }
 
 int CPad::GetWeapon() {
-	return ((int(__thiscall *)(CPad*))0x4936C0)(this) || (CPed::m_bDoAiming ? (Pads->NewState.LeftShoulder1) : ((int(__thiscall *)(CPad*))0x4936C0)(this));
+	return ((int(__thiscall *)(CPad*))0x4936C0)(this) || (CPed::m_bDoAiming ? (SecondaryFire()) : ((int(__thiscall *)(CPad*))0x4936C0)(this));
 }
 
 bool CPad::GetTarget() {
@@ -176,14 +176,14 @@ bool CPad::TargetJustDown() {
 }
 
 bool CPad::WeaponJustDown() {
-	if (Pads->m_bDisablePlayerControls == 1)
+	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return ((int(__thiscall *)(CPad*))0x493700)(this) || (CPed::m_bDoAiming ? (Pads->NewState.LeftShoulder1 != 0 && Pads->OldState.LeftShoulder1 == 0) : ((int(__thiscall *)(CPad*))0x493700)(this));
+	return ((int(__thiscall *)(CPad*))0x493700)(this) || (CPed::m_bDoAiming ? (SecondaryFireJustDown()) : ((int(__thiscall *)(CPad*))0x493700)(this));
 }
 
 bool CPad::GetWeaponTarget() {
-	if (Pads->m_bDisablePlayerControls == 1)
+	if (this->m_bDisablePlayerControls)
 		return false;
 
 	return (Pads->GetWeapon() || Pads->WeaponJustDown() || Pads->GetTarget()) || (Pads->GetWeapon() || Pads->WeaponJustDown() && Pads->GetTarget());
@@ -211,4 +211,36 @@ int CPad::GetPedWalkUpDown() {
 
 int CPad::GetPedWalkLeftRight() {
 	return ((int(__thiscall *)(CPad*))0x493110)(this);
+}
+
+bool CPad::ShiftTargetLeftJustDown() {
+	return ((bool(__thiscall *)(CPad*))0x493AE0)(this);
+
+	return 0;
+}
+
+bool CPad::ShiftTargetRightJustDown() {
+	return ((bool(__thiscall *)(CPad*))0x493B10)(this);
+
+	return 0;
+}
+
+bool CPad::SecondaryFire() {
+	if (m_bDisablePlayerControls)
+		return false;
+
+	if (Mode != 4)
+		return NewState.LeftShoulder1;
+}
+
+bool CPad::SecondaryFireJustDown() {
+	if (m_bDisablePlayerControls)
+		return false;
+
+	if (Mode != 4)
+		return NewState.LeftShoulder1 != 0 && OldState.LeftShoulder1 == 0;
+}
+
+bool CPad::GetSprint() {
+	return ((bool(__thiscall *)(CPad*))0x493A70)(this);
 }

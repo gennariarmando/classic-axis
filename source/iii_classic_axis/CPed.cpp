@@ -24,9 +24,28 @@ bool CPed::BeQuiteAndEasy() {
 }
 
 bool CPed::CanWeRunAndFireWithWeapon() {
-	int weaponType = CWorld::Players[0].m_pPed->m_aWeapons[CWorld::Players[0].m_pPed->m_nWepSlot].m_nType;
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
 
-	return weaponType == WEAPONTYPE_COLT45 || weaponType == WEAPONTYPE_UZI;
+	return w == WEAPONTYPE_COLT45 || w == WEAPONTYPE_UZI;
+}
+
+bool CPed::HeavyWeapons() {
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+
+	return w >= WEAPONTYPE_SHOTGUN && w <= WEAPONTYPE_FLAMETHROWER;
+}
+
+bool CPed::FirstPersonWeapons() {
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+
+	return w == WEAPONTYPE_ROCKETLAUNCHER || w == WEAPONTYPE_SNIPERRIFLE;
+}
+
+bool CPed::IsTypeMelee() {
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+
+	return w == WEAPONTYPE_UNARMED || w == WEAPONTYPE_BASEBALLBAT ||
+			w >= WEAPONTYPE_MOLOTOV && w <= WEAPONTYPE_DETONATOR;
 }
 
 bool CPed::CanStrafeOrMouseControl() {

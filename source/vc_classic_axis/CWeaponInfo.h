@@ -57,4 +57,4 @@ public:
 
 };
 
-extern CWeaponInfo(&aWeaponInfo)[14];
+extern CWeaponInfo(&aWeaponInfo)[37];

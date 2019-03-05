@@ -62,17 +62,17 @@ static CPatch InjectPatches([]() {
 });
 
 short CPad::GetWeaponHook() {
-	if (Pads->m_bDisablePlayerControls == 1)
+	if (Pads->m_bDisablePlayerControls)
 		return false;
 
-	return CPad::GetPad(0)->GetWeapon();
+	return Pads->GetWeapon();
 }
 
 short CPad::WeaponJustDownHook() {
-	if (Pads->m_bDisablePlayerControls == 1)
+	if (Pads->m_bDisablePlayerControls)
 		return false;
 
-	return CPad::GetPad(0)->WeaponJustDown();
+	return Pads->WeaponJustDown();
 }
 
 short CPad::LookAroundLeftRightHook() {
@@ -80,7 +80,7 @@ short CPad::LookAroundLeftRightHook() {
 		return 0;
 
 	if (pXboxPad->HasPadInHands())
-		return CPad::GetPad(0)->LookAroundLeftRight();
+		return Pads->LookAroundLeftRight();
 
 	return 0;
 }
@@ -90,7 +90,7 @@ short CPad::LookAroundUpDownHook() {
 		return 0;
 
 	if (pXboxPad->HasPadInHands())
-		return CPad::GetPad(0)->LookAroundUpDown();
+		return Pads->LookAroundUpDown();
 
 	return 0;
 }
@@ -137,14 +137,14 @@ int CPad::GetLookUpDown() {
 	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return 0;//pXboxPad->HasPadInHands() ? (CPad::GetPad(0)->NewState.RightStickY * 0.05f) : 0 - ((CPad::NewMouseControllerState.Y * 0.5f) * (TheCamera.m_fMouseAccelHorzntl * 260.0f));
+	return 0;
 }
 
 int CPad::GetLookLeftRight() {
 	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return 0;//return pXboxPad->HasPadInHands() ? (CPad::GetPad(0)->NewState.RightStickX * 0.05f) : 0 + ((CPad::NewMouseControllerState.X * 0.5f)* (TheCamera.m_fMouseAccelHorzntl * 260.0f));
+	return 0;
 }
 
 int CMousePointerStateHelper::GetMouseSetUp() {
@@ -152,7 +152,7 @@ int CMousePointerStateHelper::GetMouseSetUp() {
 }
 
 int CPad::GetWeapon() {
-	return ((int(__thiscall *)(CPad*))0x4AA830)(this) || (CPed::m_bDoAiming ? (CPad::GetPad(0)->NewState.LeftShoulder1) : ((int(__thiscall *)(CPad*))0x4AA830)(this));
+	return ((int(__thiscall *)(CPad*))0x4AA830)(this) || (CPed::m_bDoAiming ? (SecondaryFire()) : ((int(__thiscall *)(CPad*))0x4AA830)(this));
 }
 
 bool CPad::GetTarget() {
@@ -164,17 +164,17 @@ bool CPad::TargetJustDown() {
 }
 
 bool CPad::WeaponJustDown() {
-	if (Pads[0].m_bDisablePlayerControls == 1)
+	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return ((int(__thiscall *)(CPad*))0x4AA7B0)(this) || (CPed::m_bDoAiming ? (CPad::GetPad(0)->NewState.LeftShoulder1 != 0 && CPad::GetPad(0)->OldState.LeftShoulder1 == 0) : ((int(__thiscall *)(CPad*))0x4AA7B0)(this));
+	return ((int(__thiscall *)(CPad*))0x4AA7B0)(this) || (CPed::m_bDoAiming ? (SecondaryFireJustDown()) : ((int(__thiscall *)(CPad*))0x4AA7B0)(this));
 }
 
 bool CPad::GetWeaponTarget() {
-	if (Pads[0].m_bDisablePlayerControls == 1)
+	if (this->m_bDisablePlayerControls)
 		return false;
 
-	return (CPad::GetPad(0)->GetWeapon() || CPad::GetPad(0)->WeaponJustDown() || CPad::GetPad(0)->GetTarget()) || (CPad::GetPad(0)->GetWeapon() || CPad::GetPad(0)->WeaponJustDown() && CPad::GetPad(0)->GetTarget());
+	return (Pads->GetWeapon() || Pads->WeaponJustDown() || Pads->GetTarget()) || (Pads->GetWeapon() || Pads->WeaponJustDown() && Pads->GetTarget());
 }
 
 int CPad::LookAroundUpDown() {
@@ -199,4 +199,36 @@ int CPad::GetPedWalkUpDown() {
 
 int CPad::GetPedWalkLeftRight() {
 	return ((int(__thiscall *)(CPad*))0x4AAE30)(this);
+}
+
+bool CPad::ShiftTargetLeftJustDown() {
+	return ((bool(__thiscall *)(CPad*))0x4AA360)(this);
+
+	return 0;
+}
+
+bool CPad::ShiftTargetRightJustDown() {
+	return ((bool(__thiscall *)(CPad*))0x4AA300)(this);
+
+	return 0;
+}
+
+bool CPad::SecondaryFire() {
+	if (m_bDisablePlayerControls)
+		return false;
+
+	if (Mode != 4)
+	return NewState.LeftShoulder1;
+}
+
+bool CPad::SecondaryFireJustDown() {
+	if (m_bDisablePlayerControls)
+		return false;
+
+	if (Mode != 4)
+		return NewState.LeftShoulder1 != 0 && OldState.LeftShoulder1 == 0;
+}
+
+bool CPad::GetSprint() {
+	return ((bool(__thiscall *)(CPad*))0x4AA390)(this);
 }

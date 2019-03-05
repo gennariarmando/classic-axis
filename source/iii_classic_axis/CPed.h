@@ -252,6 +252,9 @@ public:
 public:
 	bool BeQuiteAndEasy();
 	bool CanWeRunAndFireWithWeapon();
+	bool HeavyWeapons();
+	bool FirstPersonWeapons();
+	bool IsTypeMelee();
 	bool CanStrafeOrMouseControl();
 	void SetAimFlag(float heading);
 	char ClearLookFlag();

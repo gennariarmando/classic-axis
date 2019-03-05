@@ -10,4 +10,11 @@ public:
 	void SetHeading(float heading);
 	void SetOrientation(float x, float y, float z);
 	void GetOrientation(float& x, float& y, float& z);
+
+	inline float GetHeading() {
+		float angle = atan2f(-up.x, up.y);
+		while (angle >= PI) angle = PI;
+		while (angle < -PI) angle = -PI;
+		return angle;
+	}
 };

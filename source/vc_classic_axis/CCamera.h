@@ -212,10 +212,13 @@ public:
 public:
 	static char &m_nFadeColorsSet;
 	static char &m_bUseMouse3rdPerson;
-	bool m_bFixBetaDirection;
+	bool m_bWalkSideways;
 
 public:
 	static void CamControlHook();
+
+public:
+	void ProcessClassicAxis();
 	int CamControl();
 	void ClearPlayerWeaponMode();
 	float Find3rdPersonQuickAimPitch();

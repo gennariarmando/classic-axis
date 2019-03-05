@@ -13,7 +13,6 @@ static CPatch InjectPatches([]() {
 	}
 });
 
-
 bool CPed::BeQuiteAndEasy() {
 	int s = FindPlayerPed()->m_eState;
 	return (s >= STATE_JUMPING && s <= STATE_INVEHICLE ||
@@ -21,18 +20,30 @@ bool CPed::BeQuiteAndEasy() {
 }
 
 bool CPed::CanWeRunAndFireWithWeapon() {
-	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[0].m_pPed->m_nWepSlot].m_nType;
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
 
 	return	w == WEAPONTYPE_PISTOL || w == WEAPONTYPE_TEC9 ||
 			w == WEAPONTYPE_UZI || w == WEAPONTYPE_SILENCED_INGRAM;
 }
 
 bool CPed::HeavyWeapons() {
-	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[0].m_pPed->m_nWepSlot].m_nType;
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
 
 	return	w == WEAPONTYPE_PYTHON || w == WEAPONTYPE_SHOTGUN ||
 		w == WEAPONTYPE_SPAS12_SHOTGUN || w == WEAPONTYPE_STUBBY_SHOTGUN ||
 		w == WEAPONTYPE_MP5 || w >= WEAPONTYPE_M4 && w <= WEAPONTYPE_MINIGUN;
+}
+
+bool CPed::FirstPersonWeapons() {
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+
+	return w == WEAPONTYPE_ROCKETLAUNCHER || w == WEAPONTYPE_SNIPERRIFLE || w == WEAPONTYPE_LASERSCOPE;
+}
+
+bool CPed::IsTypeMelee() {
+	int w = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+
+	return w >= WEAPONTYPE_UNARMED && w <= WEAPONTYPE_ROCKET;
 }
 
 bool CPed::CanStrafeOrMouseControl() {
@@ -43,8 +54,16 @@ bool CPed::CanStrafeOrMouseControl() {
 		(state - STATE_ATTACK) <= 1 || state == STATE_JUMPING || state == STATE_INVEHICLE;
 }
 
+void CPed::SetAimFlagToEntity(CEntity* e) {
+	((void(__thiscall *)(CPed *, CEntity*))0x50B510)(this, e);
+}
+
 void CPed::SetAimFlag(float heading) {
 	((void(__thiscall *)(CPed *, float))0x50B5B0)(this, heading);
+}
+
+void CPed::RestoreHeadingRate() {
+	((void(__thiscall *)(CPed *))0x4F17D0)(this);
 }
 
 char CPed::ClearLookFlag() {
@@ -53,6 +72,10 @@ char CPed::ClearLookFlag() {
 
 void CPed::SetPointGunAt(CEntity* entity) {
 	((void(__thiscall *)(CPed *, CEntity*))0x52DDF0)(this, entity);
+}
+
+void CPed::ClearWaitState() {
+	((void(__thiscall *)(CPed *))0x4F3130)(this);
 }
 
 void CPed::AimGun() {

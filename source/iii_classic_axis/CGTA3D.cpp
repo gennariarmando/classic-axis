@@ -5,19 +5,15 @@
 #include "CCam.h"
 #include "CCamera.h"
 
-static CPatch InjectPatches([]() {
-
-});
-
 CPed *FindPlayerPed() {
-	return CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+	return ((CPed*(__cdecl *)())(0x4A1150))();
 }
 
 CVehicle *FindPlayerVehicle() {
-	if (FindPlayerPed() && FindPlayerPed()->m_bInVehicle)
-		return FindPlayerPed()->m_pVehicle;
-	else
-		return false;
+	if (CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
+		return CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle;
+
+	return ((CVehicle*(__cdecl *)())(0x4A10C0))();
 }
 
 float FindPlayerHeading() {
@@ -25,11 +21,11 @@ float FindPlayerHeading() {
 }
 
 CVector *FindPlayerCentreOfWorld_NoSniperShift() {
-	return ((CVector*(__cdecl *)())_address(0x4A11C0, 0, 0, 0, 0, 0))();
+	return ((CVector*(__cdecl *)())(0x4A11C0))();
 }
 
 CVector *FindPlayerCentreOfWorld(int id) {
-	return ((CVector*(__cdecl *)(int))_address(0x4A1170, 0, 0, 0, 0, 0))(id);
+	return ((CVector*(__cdecl *)(int))(0x4A1170))(id);
 }
 
 struct PluginPathA {

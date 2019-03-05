@@ -160,13 +160,18 @@ public:
 	bool GetTarget();
 	bool TargetJustDown();
 	bool WeaponJustDown();
-	static bool GetWeaponTarget();
+	bool GetWeaponTarget();
 	int LookAroundUpDown();
 	int LookAroundLeftRight();
 	int GetLookBehindForPed();
 	int GetLookBehindForCar();
 	int GetPedWalkUpDown();
 	int GetPedWalkLeftRight();
+	bool ShiftTargetLeftJustDown();
+	bool ShiftTargetRightJustDown();
+	bool SecondaryFire();
+	bool SecondaryFireJustDown();
+	bool GetSprint();
 
 	static CPad* GetPad(int padNumber);
 };

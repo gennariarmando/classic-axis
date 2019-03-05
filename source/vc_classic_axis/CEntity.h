@@ -77,8 +77,8 @@ protected:
 	CEntity() : m_placement() {}
 
 public:
+	CVector TransformFromObjectSpace(CVector const & offset);
 	//vtable
-
 	void Add();
 	void Remove();
 	void SetModelIndex(unsigned int modelIndex);

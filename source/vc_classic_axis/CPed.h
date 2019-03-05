@@ -339,10 +339,15 @@ public:
 	bool BeQuiteAndEasy();
 	bool CanWeRunAndFireWithWeapon();
 	bool HeavyWeapons();
+	bool FirstPersonWeapons();
+	bool IsTypeMelee();
 	bool CanStrafeOrMouseControl();
+	void SetAimFlagToEntity(CEntity *e);
 	void SetAimFlag(float heading);
+	void RestoreHeadingRate();
 	char ClearLookFlag();
 	void SetPointGunAt(CEntity *entity);
+	void ClearWaitState();
 	void AimGun();
 	void ClearPointGunAt();
 	void ClearAimFlag();

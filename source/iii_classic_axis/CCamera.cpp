@@ -4,16 +4,17 @@
 #include "CWorld.h"
 #include "Settings.h"
 #include "CTimer.h"
+#include "CGeneral.h"
 
 CCamera &TheCamera = *(CCamera *)0x6FACF8;
 char &CCamera::m_nFadeColorsSet = *(char *)0x6FAD6C;
 char &CCamera::m_bUseMouse3rdPerson = *(char *)0x5F03D8;
 
 char &m_ControlMethod = *(char*)0x8F5F7C;
+bool CCamera::CCamera::m_bWalkSideways;
 
 static CPatch InjectPatches([]() {
 	CPatch::RedirectCall(0x46D500, CCamera::CamControlHook);
-
 });
 
 void CCamera::CamControlHook() {
@@ -39,73 +40,90 @@ void CCamera::CamControlHook() {
 	else
 		TheCamera.CamControl();
 
+	TheCamera.ProcessClassicAxis();
+}
+
+void CCamera::ProcessClassicAxis() {
+	CCam* Cams = TheCamera.Cams;
+
 	// Focus timing.
-	if ((pXboxPad->HasPadInHands() && (Pads->LookAroundLeftRight() || Pads->LookAroundUpDown())) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y || (!FindPlayerVehicle() && Pads->GetTarget()))
-		TheCamera.Cams->m_dwTimeToRestoreMove = CTimer::m_snTimeInMilliseconds + 1500;
+	if (Cams->LookingBehind && Cams->LookingLeft && Cams->LookingRight) {}
+	else {
+		if ((pXboxPad->HasPadInHands() && (Pads->LookAroundLeftRight() || Pads->LookAroundUpDown())) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y || (!FindPlayerVehicle() && Pads->GetTarget()))
+			Cams->m_dwTimeToRestoreMove = CTimer::m_snTimeInMilliseconds + 1500;
+	}
 
 	// Process our stuff here.
 	if (GetSetting.bProcess_FollowPed) {
 		// Manual/Auto Aiming check.
 		int s = FindPlayerPed()->m_eState;
-		int weaponType = CWorld::Players[0].m_pPed->m_aWeapons[CWorld::Players[0].m_pPed->m_nWepSlot].m_nType;
-		if (!CPad::GetPad(0)->m_bDisablePlayerControls && !CPad::GetPad(0)->GetLookBehindForPed() && FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy() && FindPlayerPed()->m_nMoveState != PEDMOVE_SPRINT && !CPad::GetPad(0)->m_bDisablePlayerControls && !FindPlayerVehicle() && (TheCamera.Cams->Mode != MODE_TOP_DOWN_PED) && (weaponType >= WEAPONTYPE_COLT45 && weaponType <= WEAPONTYPE_FLAMETHROWER) && CPad::GetPad(0)->GetTarget())
+		int weaponType = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
+		if (!Pads->GetLookBehindForPed() && FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy() && !Pads->GetSprint() && FindPlayerPed()->m_nMoveState != PEDMOVE_SPRINT && !FindPlayerVehicle() && (Cams->Mode != MODE_TOP_DOWN_PED) && (!FindPlayerPed()->IsTypeMelee()) && Pads->GetTarget())
 			CPed::m_bDoAiming = true;
 		else
 			CPed::m_bDoAiming = false;
 
 		if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget) {
-			if ((pXboxPad->HasPadInHands() && (Pads->Mode == 4 ? (Pads->NewState.DPadDown || Pads->NewState.DPadUp || Pads->NewState.DPadLeft || Pads->NewState.DPadRight) : (Pads->LookAroundLeftRight() || Pads->LookAroundUpDown()))) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y)
+			if ((pXboxPad->HasPadInHands() && (Pads->Mode == 4 ? Pads->NewState.LeftShoulder2 <= 30 /*(Pads->NewState.DPadDown || Pads->NewState.DPadUp || Pads->NewState.DPadLeft || Pads->NewState.DPadRight)*/ : (Pads->LookAroundLeftRight() || Pads->LookAroundUpDown()))) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y)
 				((void(__thiscall *)(CPed *))0x4F28A0)(FindPlayerPed());
-			//CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt = 0;
+		}
+		else {
+			if (CPed::m_bDoAiming) {
+				if (!Pads->SecondaryFireJustDown() && (Pads->Mode == 4 ? Pads->NewState.LeftShoulder2 >= 30 : Pads->ShiftTargetLeftJustDown() || Pads->ShiftTargetRightJustDown()))
+					((void(__thiscall *)(CPed *))0x4F28D0)(FindPlayerPed());
+			}
 		}
 
-		float fFrontalView = TheCamera.Cams->Beta - M_PI_2;
+		float fFrontalView = CGeneral::GetATanOfXY(Cams->Front.x, Cams->Front.y) - M_PI_2;
 
-		if (TheCamera.Cams->Mode == MODE_FOLLOWPED && TheCamera.Cams->Mode != MODE_FIXED) {
+		if (!Pads->m_bDisablePlayerControls && !FindPlayerPed()->IsTypeMelee() && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && Cams->Mode == MODE_FOLLOWPED || Cams->Mode == MODE_1STPERSON || Cams->Mode == MODE_ROCKETLAUNCHER || Cams->Mode == MODE_SNIPER || Cams->Mode == MODE_M16_1STPERSON) {
 			if (FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy()) {
-				if (weaponType > WEAPONTYPE_UZI && weaponType < WEAPONTYPE_MOLOTOV && CPad::GetPad(0)->GetWeaponTarget()) {
-					FindPlayerPed()->SetHeading(fFrontalView);
+				if (Pads->GetWeapon() && !FindPlayerPed()->CanWeRunAndFireWithWeapon() && !FindPlayerPed()->FirstPersonWeapons()) {
+					FindPlayerPed()->m_matrix.SetRotateZOnly(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
+					CCamera::m_bWalkSideways = true;
 				}
-				else if (FindPlayerPed()->CanWeRunAndFireWithWeapon() && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && CPed::m_bDoAiming) {
-					FindPlayerPed()->SetHeading(fFrontalView);
+				else if (CPed::m_bDoAiming) {
+					FindPlayerPed()->m_matrix.SetRotateZOnly(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
+					CCamera::m_bWalkSideways = true;
 				}
 				else {
 					FindPlayerPed()->m_fRotationCur = FindPlayerPed()->m_fRotationCur;
 					FindPlayerPed()->m_fRotationDest = FindPlayerPed()->m_fRotationDest;
+					CCamera::m_bWalkSideways = false;
 				}
 
 				FindPlayerPed()->m_matrix.UpdateRW();
 
 				static bool m_bPointGunHasBeenCleared;
-				if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget) {
-					if (!FindPlayerVehicle() && CPed::m_bDoAiming &&
-						(weaponType >= WEAPONTYPE_COLT45 && weaponType <= WEAPONTYPE_FLAMETHROWER)) {
-						FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
-
-						if (!CPad::GetPad(0)->GetWeapon() && !CPad::GetPad(0)->WeaponJustDown()) {
-							FindPlayerPed()->SetPointGunAt(0);
-						}
-
-						m_bPointGunHasBeenCleared = false;
+				if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons()) {
+					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
+					if (!Pads->GetWeapon() && !Pads->WeaponJustDown()) {
+						FindPlayerPed()->SetPointGunAt(0);
 					}
-					else {
-						if (!m_bPointGunHasBeenCleared) {
-							FindPlayerPed()->ClearPointGunAt();
-							FindPlayerPed()->ClearAimFlag();
-							m_bPointGunHasBeenCleared = true;
-						}
+					m_bPointGunHasBeenCleared = false;
+				}
+				else {
+					if (!m_bPointGunHasBeenCleared) {
+						FindPlayerPed()->ClearPointGunAt();
+						FindPlayerPed()->ClearAimFlag();
+						FindPlayerPed()->ClearAll();
+						m_bPointGunHasBeenCleared = true;
 					}
 				}
 			}
 		}
+		else {
+			CCamera::m_bWalkSideways = false;
+		}
 
-		// Some hacks here to fix cycle.
+		// Some hacks here
+		// Fix cycle.
 		if (TheCamera.m_bUseMouse3rdPerson) {
 			CPatch::Set<BYTE>(0x468D09, 0x74);
 			CPatch::Set<BYTE>(0x468D92, 0x74);
@@ -113,11 +131,6 @@ void CCamera::CamControlHook() {
 		else {
 			CPatch::Set<BYTE>(0x468D09, 0x75);
 			CPatch::Set<BYTE>(0x468D92, 0x75);
-		}
-
-		if (s == STATE_ENTERING_TRAIN || s == STATE_EXITING_TRAIN || s == STATE_GETTING_IN_VEHICLE || s == STATE_EXITING_VEHICLE || s == STATE_JACKING_VEHICLE || s == STATE_DRAGGED_OUT) {
-			TheCamera.m_bCamDirectlyInFront = 0;
-			TheCamera.m_bCamDirectlyBehind = 1;
 		}
 
 		// Replace settings with ours

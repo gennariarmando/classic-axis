@@ -1,6 +1,33 @@
 #include "CGTAVC.h"
 #include "CEntity.h"
 
+void __cdecl TransformPoint(CVector *outPoint, CPlaceable *placement, CVector const& point)
+{
+	long double v3; // st7
+	long double v4; // st6
+
+	v3 = cos(placement->GetHeading());
+	v4 = sin(placement->GetHeading());
+	outPoint->x = v3 * point.x - v4 * point.y + placement->pos.x;
+	outPoint->y = v3 * point.y + v4 * point.x + placement->pos.y;
+	outPoint->z = placement->pos.z + point.z;
+}
+
+CVector CEntity::TransformFromObjectSpace(CVector const& offset) {
+	CVector result; // 1
+	RwMatrix *p = this->m_placement.m_pAttachMatrix;
+	if (p) {
+		CVector point = operator*(this->m_placement, offset);
+		result.x = point.x;
+		result.y = point.y;
+		result.z = point.z;
+	}
+	else {
+		TransformPoint(&result, &this->m_placement, offset);
+	}
+	return result;
+}
+
 // Converted from void CEntity::Add(void) 0x0
 void CEntity::Add() {
 	((void(__thiscall *)(CEntity*))(*(void ***)this)[0])(this);

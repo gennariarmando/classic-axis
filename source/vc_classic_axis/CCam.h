@@ -105,7 +105,6 @@ public:
 public:
 	bool m_bFPSPossible;
 	int m_dwTimeToRestoreMove;
-	CVector *DoAverageOnVector(CVector const & out, CVector const & ThingToAverage);
 
 public:
 	static void __fastcall ProcessFollowPed(int, int, CVector const& target, float, float, float);
@@ -125,7 +124,6 @@ public:
 	void ProcessSpecialHeightRoutines();
 	void ProcessFollowPedClassic(CVector const & target, float targetOrient, int a4, int a5);
 	void ProcessCamOnAString(CVector const & target, float targetOrient, int a4, int a5);
-	void PrepareBodyParts(bool reset);
 	void CamOnAStringUnobscured(CVector const & target, float distval);
 	void WorkOutCamHeight(CVector const & target, float targetOrientation, float targetHeight);
 	char RotCamIfInFrontCar(CVector const & target, float targetOrientation);
