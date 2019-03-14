@@ -58,11 +58,12 @@ void CCamera::ProcessClassicAxis() {
 	}
 
 	// Process our stuff here.
+	static bool m_bPointGunHasBeenCleared;
 	if (GetSetting.bProcess_FollowPed) {
 		// Manual/Auto Aiming check.
 		int s = FindPlayerPed()->m_eState;
 		int weaponType = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_aWeapons[CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_nWepSlot].m_nType;
-		if (!Pads->GetLookBehindForPed() && FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy() && !Pads->GetSprint() && FindPlayerPed()->m_nMoveState != PEDMOVE_SPRINT && !FindPlayerVehicle() && (Cams->Mode != MODE_TOP_DOWN_PED) && (!FindPlayerPed()->IsTypeMelee()) && Pads->GetTarget())
+		if (!Pads->GetLookBehindForPed() && FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy() && FindPlayerPed()->m_nMoveState != PEDMOVE_SPRINT && !FindPlayerVehicle() && (Cams->Mode != MODE_TOP_DOWN_PED) && (!FindPlayerPed()->IsTypeMelee()) && Pads->GetTarget())
 			CPed::m_bDoAiming = true;
 		else
 			CPed::m_bDoAiming = false;
@@ -83,14 +84,13 @@ void CCamera::ProcessClassicAxis() {
 		if (!Pads->m_bDisablePlayerControls && !FindPlayerPed()->IsTypeMelee() && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && Cams->Mode == MODE_FOLLOWPED || Cams->Mode == MODE_1STPERSON || Cams->Mode == MODE_ROCKETLAUNCHER || Cams->Mode == MODE_SNIPER || Cams->Mode == MODE_M16_1STPERSON) {
 			if (FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy()) {
 				if (Pads->GetWeapon() && !FindPlayerPed()->CanWeRunAndFireWithWeapon() && !FindPlayerPed()->FirstPersonWeapons()) {
-					FindPlayerPed()->m_placement.SetRotateZOnly(fFrontalView);
+					FindPlayerPed()->m_placement.SetHeading(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
-					m_bWalkSideways = true;
 				}
 				else if (CPed::m_bDoAiming) {
-					FindPlayerPed()->m_placement.SetRotateZOnly(fFrontalView);
+					FindPlayerPed()->m_placement.SetHeading(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
@@ -103,26 +103,29 @@ void CCamera::ProcessClassicAxis() {
 				}
 
 				FindPlayerPed()->m_placement.UpdateRW();
+			}
 
-				static bool m_bPointGunHasBeenCleared;
-				if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons()) {
-					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
-					if (!Pads->GetWeapon() && !Pads->WeaponJustDown()) {
-						FindPlayerPed()->SetPointGunAt(0);
-					}
-					m_bPointGunHasBeenCleared = false;
+			if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons() && s != STATE_ATTACK && s != STATE_FIGHT && s != STATE_FACE_PHONE && s != STATE_MAKE_PHONECALL && !Pads->DuckJustDown()) {			
+				FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
+				FindPlayerPed()->SetPointGunAt(0);
+
+				m_bPointGunHasBeenCleared = false;
+			}
+			else {
+				if (!m_bPointGunHasBeenCleared) {
+					FindPlayerPed()->ClearPointGunAt();
+					FindPlayerPed()->ClearAimFlag();
+
+					m_bPointGunHasBeenCleared = true;
 				}
-				else {
-					if (!m_bPointGunHasBeenCleared) {
-						FindPlayerPed()->ClearPointGunAt();
-						FindPlayerPed()->ClearAimFlag();
-						FindPlayerPed()->ClearAll();
-						m_bPointGunHasBeenCleared = true;
-					}
-				}
+
+				// Duck temporary fix.
+				if (FindPlayerPed()->m_dwDuckTimer)
+					FindPlayerPed()->SetDuck(60000, 1);
 			}
 		}
 		else {
+			m_bPointGunHasBeenCleared = false;
 			m_bWalkSideways = false;
 		}
 
@@ -146,6 +149,12 @@ void CCamera::ProcessClassicAxis() {
 
 		// Restore aiming point in case "Widescreen Fix" changes it.
 		CPatch::SetPointer(0x46F925 + 2, &m_f3rdPersonCHairMultX);
+		
+		// No jump while aiming.
+		if (CPed::m_bDoAiming)
+			CPatch::Set<BYTE>(0x4F03CA, 0x74);
+		else
+			CPatch::Set<BYTE>(0x4F03CA, 0x75);
 
 		// Replace settings with ours
 		m_f3rdPersonCHairMultX = 0.5f;

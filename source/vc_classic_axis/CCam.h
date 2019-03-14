@@ -103,11 +103,11 @@ public:
 	bool m_bFirstPersonRunAboutActive;
 
 public:
-	bool m_bFPSPossible;
-	int m_dwTimeToRestoreMove;
+	static int m_dwTimeToRestoreMove;
 
 public:
 	static void __fastcall ProcessFollowPed(int, int, CVector const& target, float, float, float);
+	static void __fastcall ProcessAimWeapon(int, int, CVector const & target, float targetOrient, float a4, float a5);
 	static void __fastcall ProcessFollowVeh(int, int, CVector const & target, float a3, float a4, float a5);
 	static bool __fastcall ProcessPlayerMovements(int a1, int);
 	static bool __fastcall ProcessShootingDirection(int a1, int);

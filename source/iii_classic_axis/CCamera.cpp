@@ -54,6 +54,7 @@ void CCamera::ProcessClassicAxis() {
 	}
 
 	// Process our stuff here.
+	static bool m_bPointGunHasBeenCleared;
 	if (GetSetting.bProcess_FollowPed) {
 		// Manual/Auto Aiming check.
 		int s = FindPlayerPed()->m_eState;
@@ -100,25 +101,23 @@ void CCamera::ProcessClassicAxis() {
 
 				FindPlayerPed()->m_matrix.UpdateRW();
 
-				static bool m_bPointGunHasBeenCleared;
-				if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons()) {
+				if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons() && s != STATE_ATTACK && s != STATE_FIGHT) {
 					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
-					if (!Pads->GetWeapon() && !Pads->WeaponJustDown()) {
-						FindPlayerPed()->SetPointGunAt(0);
-					}
+					FindPlayerPed()->SetPointGunAt(0);
+
 					m_bPointGunHasBeenCleared = false;
 				}
 				else {
 					if (!m_bPointGunHasBeenCleared) {
 						FindPlayerPed()->ClearPointGunAt();
-						FindPlayerPed()->ClearAimFlag();
-						FindPlayerPed()->ClearAll();
+						FindPlayerPed()->ClearAttack();
 						m_bPointGunHasBeenCleared = true;
 					}
 				}
 			}
 		}
 		else {
+			m_bPointGunHasBeenCleared = false;
 			CCamera::m_bWalkSideways = false;
 		}
 
@@ -132,6 +131,12 @@ void CCamera::ProcessClassicAxis() {
 			CPatch::Set<BYTE>(0x468D09, 0x75);
 			CPatch::Set<BYTE>(0x468D92, 0x75);
 		}
+
+		// No jump while aiming.
+		if (CPed::m_bDoAiming)
+			CPatch::Set<BYTE>(0x4D73DC, 0x74);
+		else
+			CPatch::Set<BYTE>(0x4D73DC, 0x75);
 
 		// Replace settings with ours
 		TheCamera.m_f3rdPersonCHairMultX = 0.5f;

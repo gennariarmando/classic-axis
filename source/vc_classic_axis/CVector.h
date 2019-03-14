@@ -190,3 +190,7 @@ static inline CVector CrossProduct(const CVector &v1, const CVector &v2) {
 		v1.z*v2.x - v1.x*v2.z,
 		v1.x*v2.y - v1.y*v2.x);
 }
+
+static inline float DotProduct(const CVector &v1, const CVector &v2) {
+	return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+}

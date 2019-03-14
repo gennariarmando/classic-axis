@@ -80,11 +80,6 @@ void CEntity::ProcessShift() {
 	((void(__thiscall *)(CEntity*))(*(void ***)this)[10])(this);
 }
 
-// Converted from void CEntity::Teleport(CVector posn) 0x0
-void CEntity::Teleport(CVector posn) {
-	((void(__thiscall *)(CEntity*, CVector))(*(void ***)this)[11])(this, posn);
-}
-
 // Converted from void CEntity::PreRender(void) 0x0
 void CEntity::PreRender() {
 	((void(__thiscall *)(CEntity*))(*(void ***)this)[12])(this);

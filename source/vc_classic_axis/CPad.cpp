@@ -232,3 +232,7 @@ bool CPad::SecondaryFireJustDown() {
 bool CPad::GetSprint() {
 	return ((bool(__thiscall *)(CPad*))0x4AA390)(this);
 }
+
+char CPad::DuckJustDown() {
+	return ((char(__thiscall *)(CPad*))0x4AA430)(this);
+}

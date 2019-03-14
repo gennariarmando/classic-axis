@@ -2,6 +2,7 @@
 #include "CPed.h"
 #include "CCamera.h"
 #include "CWorld.h"
+#include "Settings.h"
 
 CVector *vecPedCarDoorAnimOffset = (CVector *)0x62E030;
 CVector *vecPedCarDoorLoAnimOffset = (CVector *)0x62E03C;
@@ -14,8 +15,17 @@ bool CPed::m_bDoAiming;
 bool CPed::m_bHideCrosshair = false;
 
 static CPatch InjectPatches([]() {
-
+	if (GetSetting.bProcess_FollowPed) {
+		CPatch::RedirectCall(0x4E72FC, CPed::CleanAimFlagHook);
+	}
 });
+
+void __fastcall CPed::CleanAimFlagHook(int, int) {
+	FindPlayerPed()->ClearAimFlag();
+
+	if (CPed::m_bDoAiming && (bool)!Pads->GetWeapon() && FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nWepSlot].m_nState != WEAPONSTATE_RELOADING)
+		FindPlayerPed()->SetPointGunAt(0);
+}
 
 bool CPed::BeQuiteAndEasy() {
 	int s = FindPlayerPed()->m_eState;
@@ -66,6 +76,10 @@ char CPed::ClearLookFlag() {
 
 void CPed::SetPointGunAt(CEntity* entity) {
 	((void(__thiscall *)(CPed *, CEntity*))0x4E5F70)(this, entity);
+}
+
+void CPed::ClearAttack() {
+	((void(__thiscall *)(CPed *))0x4E6790)(this);
 }
 
 void CPed::AimGun() {

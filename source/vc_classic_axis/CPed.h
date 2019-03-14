@@ -336,6 +336,9 @@ public:
 	float m_fSeekExAngle;
 
 public:
+	static void __fastcall CleanAimFlagHook(int, int);
+
+public:
 	bool BeQuiteAndEasy();
 	bool CanWeRunAndFireWithWeapon();
 	bool HeavyWeapons();
@@ -344,22 +347,27 @@ public:
 	bool CanStrafeOrMouseControl();
 	void SetAimFlagToEntity(CEntity *e);
 	void SetAimFlag(float heading);
+	void Attack();
 	void RestoreHeadingRate();
 	char ClearLookFlag();
 	void SetPointGunAt(CEntity *entity);
+	void ClearAttack();
 	void ClearWaitState();
 	void AimGun();
 	void ClearPointGunAt();
 	void ClearAimFlag();
 	void ClearAll();
 	void RestorePreviousState();
+	int SetAttack(CEntity * e);
 	int SetAttackTimer(unsigned int time);
 	int SetShootTimer(unsigned int time);
 	void Say(unsigned short arg0);
+	void SetDuck(int unk, int unk2);
+	void Duck();
+	void RemoveWeaponAnims(int a2, float a3);
+	void Teleport(CVector posn);
 
 public:
 	static bool m_bDoAiming;
 	static bool m_bHideCrosshair;
 };
-
-//VALIDATE_SIZE(CPed, 0x5F4);

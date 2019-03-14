@@ -53,6 +53,10 @@ static unsigned __int8 AsciiToUnicode(const unsigned __int8 *a1, wchar_t *a2) {
 	return ((unsigned __int8(__cdecl *)(const unsigned __int8 *, wchar_t *))0x5009C0)(a1, a2);
 }
 
+static void WellBufferMe(float a1, float* a2, float* a3, float a4, float a5, bool a6) {
+	return ((void(__cdecl *)(float, float*, float*, float, float, bool))0x4864E3)(a1, a2, a3, a4, a5, a6);
+}
+
 static unsigned __int64 myrand_seed = 1;
 
 static int myrand(void) {

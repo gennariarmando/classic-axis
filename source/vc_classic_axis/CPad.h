@@ -160,6 +160,7 @@ public:
 	bool GetTarget();
 	bool TargetJustDown();
 	bool WeaponJustDown();
+	bool WeaponJustUp();
 	bool GetWeaponTarget();
 	int LookAroundUpDown();
 	int LookAroundLeftRight();
@@ -172,6 +173,7 @@ public:
 	bool SecondaryFire();
 	bool SecondaryFireJustDown();
 	bool GetSprint();
+	char DuckJustDown();
 
 	static CPad* GetPad(int padNumber);
 };

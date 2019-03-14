@@ -49,10 +49,7 @@ static CPatch InjectPatches([]() {
 	if (GetSetting.bProcess_FollowVeh) {
 		CPatch::RedirectCall(0x459A54, CCam::ProcessFollowVeh);
 		CPatch::RedirectCall(0x459B36, CCam::ProcessFollowVeh);
-
-		// Veh/Foo 
-		CPatch::Nop(0x4713DB, 2);
-		CPatch::Nop(0x47143B, 2);
+		CPatch::RedirectCall(0x459A16, CCam::ProcessFollowVeh);
 	}
 });
 
@@ -115,9 +112,17 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 	else
 		TargetCoors = target;
 
+	static float fAlphaFix = 0.0f;
+	if (Alpha >= -0.15f)
+		fAlphaFix = 0.2f;
+	else
+		fAlphaFix = 0.0f;
+
 	TargetCoors.z = TargetCoors.z + 0.05f + m_fSyphonModeTargetZOffSet;
 
 	CVector Dist = Source - TargetCoors;
+	Dist.z -= fAlphaFix;
+
 	float Length = Dist.Magnitude();
 	float LengthTemp = 0.0f;
 
@@ -174,7 +179,7 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 	if (!GetSetting.bNoAutoFoc)
 	if ((pXboxPad->HasPadInHands() && FindPlayerPed()->m_fTotSpeed >= 0.06f) && !LookingBehind) {
 		Beta = CGeneral::GetATanOfXY(Dist.x, Dist.y);
-		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude() + DEGTORAD(10.0f), Dist.z - DEGTORAD(2.0f));
+		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d(), Dist.z);
 	}
 	
 	while (Beta >= PI) Beta -= 2.0f * PI;
@@ -183,13 +188,11 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 	while (Alpha < -PI) Alpha += 2.0f * PI;
 
 	// Movements
+	float fFV = FOV * 0.0125;
+
 	if (!Pads->m_bDisablePlayerControls) {
 		if (!TheCamera.m_bCamDirectlyBehind && !TheCamera.m_bCamDirectlyInFront && !LookingBehind && !LookingLeft && !LookingRight) {
 			if (CPad::NewMouseControllerState.X != 0.0 || CPad::NewMouseControllerState.Y != 0.0) {
-				float fFV = FOV * 0.0125;
-
-				//Front.y = CPad::NewMouseControllerState.Y;
-				//Front.x = CPad::NewMouseControllerState.X;
 				BetaSpeed = 0.0f;
 				AlphaSpeed = 0.0f;
 				Alpha -= CPad::NewMouseControllerState.Y * 4.0 * fFV * TheCamera.m_fMouseAccelVertical;
@@ -197,8 +200,8 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 			}
 
 			if (pXboxPad->HasPadInHands()) {
-				Alpha -= (Pads->LookAroundUpDown() *  GetSetting.fRightStickVerticalSensitivity) / 1280.0f;
-				Beta -= (Pads->LookAroundLeftRight() * GetSetting.fRightStickHorizontalSensitivity) / 1280.0f;
+				Alpha -= Pads->LookAroundUpDown() * 0.5f * fFV * (GetSetting.fRightStickVerticalSensitivity / 1280.0f);
+				Beta -= Pads->LookAroundLeftRight() * 0.5f * fFV * (GetSetting.fRightStickHorizontalSensitivity / 1280.0f);
 			}
 		}
 	}
@@ -208,6 +211,7 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 
 	Dist = CVector(cos(Beta) * cos(Alpha), sin(Beta) * cos(Alpha), sin(Alpha));
 	Dist = Front + Dist * Length;
+	Dist.z += fAlphaFix;
 
 	Source = TargetCoors + Dist - Front;
 	SourceBeforeLookBehind = TargetCoors + Dist;
@@ -247,16 +251,15 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 
 	if (TheCamera.m_bUseTransitionBeta)
 		Beta = m_fTransitionBeta;
-	//Beta = CGeneral::GetATanOfXY(1.85 * sin(m_fTransitionBeta) + TargetCoors.x - TargetCoors.x, Source.y - TargetCoors.y);
 
 	if (TheCamera.m_bCamDirectlyBehind) {
 		m_bCollisionChecksOn = 1;
 		Beta = targetOrient + PI;
-		Alpha = DEGTORAD(2.0);
+		Alpha = 0.0f;
 	}
 	if (TheCamera.m_bCamDirectlyInFront) {
 		Beta = targetOrient;
-		Alpha = DEGTORAD(2.0);
+		Alpha = 0.0f;
 	}
 
 	Front = TargetCoors - Source;
@@ -285,6 +288,13 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 		aimoffset = CVector(0.425f, 0.935f, 0.105f);
 
 	CVector TargetCoors = FindPlayerPed()->TransformFromObjectSpace(aimoffset);
+
+	static float fAlphaFix = 0.0f;
+	if (Alpha >= -0.15f)
+		fAlphaFix = 0.0f;
+	else
+		fAlphaFix = 0.0f;
+
 	CColPoint colpoint;
 	CEntity *e = NULL;
 
@@ -296,7 +306,7 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 
 	TargetCoors.z = TargetCoors.z + 0.05f + m_fSyphonModeTargetZOffSet - (sin(Alpha));
 
-	CVector Dist = TargetCoors - Source;
+	CVector Dist = Source - TargetCoors;
 	float Length = Dist.Magnitude();
 	float LengthTemp = 0.0f;
 
@@ -338,7 +348,7 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !LookingBehind) {
 		if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt)
 			Beta = CGeneral::GetATanOfXY(Source.x - CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt->m_matrix.pos.x, Source.y - CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt->m_matrix.pos.y);
-		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d(), Dist.z);
+		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + DEGTORAD(2.0f * 10.0f), Dist.z + DEGTORAD(2.0f));
 	}
 
 	while (Beta >= PI) Beta -= 2.0f * PI;
@@ -347,13 +357,11 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 	while (Alpha < -PI) Alpha += 2.0f * PI;
 
 	// Movements
+	float fFV = FOV * 0.0125;
+
 	if (!Pads->m_bDisablePlayerControls) {
 		if (!TheCamera.m_bCamDirectlyBehind && !TheCamera.m_bCamDirectlyInFront && !LookingBehind && !LookingLeft && !LookingRight) {
 			if (CPad::NewMouseControllerState.X != 0.0 || CPad::NewMouseControllerState.Y != 0.0) {
-				float fFV = FOV * 0.0125;
-
-				//Front.y = CPad::NewMouseControllerState.Y;
-				//Front.x = CPad::NewMouseControllerState.X;
 				BetaSpeed = 0.0f;
 				AlphaSpeed = 0.0f;
 				Alpha -= CPad::NewMouseControllerState.Y * 4.0 * fFV * TheCamera.m_fMouseAccelVertical;
@@ -412,11 +420,11 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 	if (TheCamera.m_bCamDirectlyBehind) {
 		m_bCollisionChecksOn = 1;
 		Beta = targetOrient + PI;
-		Alpha = DEGTORAD(2.0);
+		Alpha = 0.0f;
 	}
 	if (TheCamera.m_bCamDirectlyInFront) {
 		Beta = targetOrient;
-		Alpha = DEGTORAD(2.0);
+		Alpha = 0.0f;
 	}
 
 	Front = TargetCoors - Source;
@@ -454,17 +462,25 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 
 	CVector VehSize = (CModelInfo::ms_modelInfoPtrs[CamTargetEntity->m_nModelIndex]->m_pColModel->m_boundBox.m_vecMax - CModelInfo::ms_modelInfoPtrs[CamTargetEntity->m_nModelIndex]->m_pColModel->m_boundBox.m_vecMin);
 	
+	static float fAlphaFix = 0.0f;
+	if (Alpha >= -0.15f)
+		fAlphaFix = 0.40f + sqrt(VehSize.z * VehSize.y) * 0.10f;
+	else
+		fAlphaFix = 0.0f;
+
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
-		VehSize += CVector(0.5, 5.0f, 0.5f);
+		VehSize += CVector(0.7, 4.6f, 0.7f);
 
 	float distval = VehSize.Magnitude();
 
-	TargetCoors.z = TargetCoors.z - 0.85f + VehSize.z;
+	TargetCoors.z = TargetCoors.z - 1.0f + VehSize.z;
 
 	CVector Dist;
 	Dist.x = TargetCoors.x - Source.x;
 	Dist.y = TargetCoors.y - Source.y;
 	Dist.z = Source.z - TargetCoors.z;
+	Dist.z -= fAlphaFix;
+
 	float Length = Dist.Magnitude();
 	float LengthTemp = 0.0f;
 
@@ -505,7 +521,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	if (CA_MIN_DISTANCE >= 0.60000002 * distval)
 		CA_MIN_DISTANCE = 0.60000002 * distval;
 
-	Length = CA_MAX_DISTANCE + 0.5f;
+	Length = CA_MAX_DISTANCE + 0.25f;
 
 	float speed = 0.10f;
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
@@ -514,7 +530,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	if (!GetSetting.bNoAutoFoc)
 		if ((pXboxPad->HasPadInHands() && FindPlayerVehicle() && FindPlayerVehicle()->m_fTotSpeed > speed) || (((CTimer::m_snTimeInMilliseconds > m_dwTimeToRestoreMove)) && FindPlayerVehicle() && FindPlayerVehicle()->m_fTotSpeed > speed && !TheCamera.m_bCamDirectlyBehind && !TheCamera.m_bCamDirectlyInFront) && !LookingBehind) {
 			Beta = CGeneral::GetATanOfXY(Dist.x, Dist.y);
-			Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + DEGTORAD(60.0f), Dist.z + DEGTORAD(6.0f));
+			Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d(), Dist.z);
 		}
 
 	while (Alpha > PI) Alpha -= 2 * PI;
@@ -522,7 +538,6 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	while (Beta > PI) Beta -= 2 * PI;
 	while (Beta < -PI) Beta += 2 * PI;
 
-	// Movements
 	static bool m_bMotion;
 	if (FindPlayerVehicle() &&
 		(FindPlayerVehicle()->m_nModelIndex == GetSetting.ModelID[0] ||
@@ -551,13 +566,12 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	else
 		m_bMotion = true;
 
+	// Movements
+	float fFV = FOV * 0.0125;
+
 	if (!Pads->m_bDisablePlayerControls) {
 		if (!TheCamera.m_bCamDirectlyBehind && !TheCamera.m_bCamDirectlyInFront && !LookingBehind && !LookingLeft && !LookingRight) {
 			if (CPad::NewMouseControllerState.X != 0.0 || CPad::NewMouseControllerState.Y != 0.0) {
-				float fFV = FOV * 0.0125;
-
-				//Front.y = CPad::NewMouseControllerState.Y;
-				//Front.x = CPad::NewMouseControllerState.X;
 				BetaSpeed = 0.0f;
 				AlphaSpeed = 0.0f;
 				Alpha -= CPad::NewMouseControllerState.Y * 4.0 * fFV * TheCamera.m_fMouseAccelVertical;
@@ -565,8 +579,8 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 			}
 
 			if (pXboxPad->HasPadInHands() && m_bMotion) {
-				Alpha -= (Pads->LookAroundUpDown() *  GetSetting.fRightStickVerticalSensitivity) / 1280.0f;
-				Beta -= (Pads->LookAroundLeftRight() * GetSetting.fRightStickHorizontalSensitivity) / 1280.0f;
+				Alpha -= Pads->LookAroundUpDown() * 0.5f * fFV * (GetSetting.fRightStickVerticalSensitivity / 1280.0f);
+				Beta -= Pads->LookAroundLeftRight() * 0.5f * fFV * (GetSetting.fRightStickHorizontalSensitivity / 1280.0f);
 			}
 		}
 	}
@@ -578,6 +592,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	Dist.x = Dist.x * Length + Front.x;
 	Dist.y = Dist.y * Length + Front.y;
 	Dist.z = Front.z + Dist.z * Length;
+	Dist.z += fAlphaFix;
 
 	Source.x = Front.x - Dist.x + TargetCoors.x;
 	Source.y = Front.y - Dist.y + TargetCoors.y;
@@ -600,7 +615,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 		float l = d.Magnitude();
 
 		if (l > 0.4f) {
-			d = d / l * (l - 0.25f);
+			d = d / l * (l - 0.3f);
 		}
 
 		Source = TargetCoors + d;
@@ -617,15 +632,14 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	if (TheCamera.m_bCamDirectlyBehind) {
 		m_bCollisionChecksOn = 1;
 		Beta = targetOrient;
-		Alpha = DEGTORAD(5.0);
+		Alpha = 0.0f;
 	}
 	if (TheCamera.m_bCamDirectlyInFront) {
 		Beta = targetOrient + PI;
-		Alpha = DEGTORAD(5.0);
+		Alpha = 0.0f;
 	}
 
 	Front = TargetCoors - Source;
-
 	m_fRealGroundDist = Front.Magnitude();
 	m_fMinDistAwayFromCamWhenInterPolating = m_fRealGroundDist;
 	Front.Normalise();

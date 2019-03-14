@@ -250,6 +250,9 @@ public:
 	float m_fSeekExAngle;
 
 public:
+	static void __fastcall CleanAimFlagHook(int, int);
+
+public:
 	bool BeQuiteAndEasy();
 	bool CanWeRunAndFireWithWeapon();
 	bool HeavyWeapons();
@@ -259,6 +262,7 @@ public:
 	void SetAimFlag(float heading);
 	char ClearLookFlag();
 	void SetPointGunAt(CEntity *entity);
+	void ClearAttack();
 	void AimGun();
 	void ClearPointGunAt();
 	void ClearAimFlag();
@@ -272,7 +276,5 @@ public:
 public:
 	static bool m_bDoAiming;
 	static bool m_bHideCrosshair;
-
 };
 
-VALIDATE_SIZE(CPed, 0x53C);

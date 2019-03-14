@@ -89,7 +89,6 @@ public:
 	void ProcessControl();
 	void ProcessCollision();
 	void ProcessShift();
-	void Teleport(CVector posn);
 	void PreRender();
 	void Render();
 	bool SetupLighting();

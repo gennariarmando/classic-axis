@@ -3,7 +3,7 @@
 #include "Settings.h"
 
 RwMatrix* CPedIK::GetComponentPosition(RwV3d* pos, int id) {
-	return ((RwMatrix*(__thiscall *)(CPedIK *, RwV3d*, int))0x4ED0F0)(this, pos, id);
+	return ((RwMatrix*(__thiscall *)(CPedIK *, RwV3d*, int))0x52F9B0)(this, pos, id);
 }
 
 char CPedIK::PointGunInDirection(float phi, float theta) {

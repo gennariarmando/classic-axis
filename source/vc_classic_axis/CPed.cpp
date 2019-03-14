@@ -9,9 +9,16 @@ bool CPed::m_bHideCrosshair = false;
 
 static CPatch InjectPatches([]() {
 	if (GetSetting.bProcess_FollowPed) {
-
+		CPatch::RedirectCall(0x52C274, CPed::CleanAimFlagHook);
 	}
 });
+
+void __fastcall CPed::CleanAimFlagHook(int, int) {
+	if (CPed::m_bDoAiming && (bool)!Pads->GetWeapon() && FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nWepSlot].m_nState != WEAPONSTATE_RELOADING)
+		FindPlayerPed()->SetPointGunAt(0);
+
+	FindPlayerPed()->ClearAimFlag();
+}
 
 bool CPed::BeQuiteAndEasy() {
 	int s = FindPlayerPed()->m_eState;
@@ -62,6 +69,10 @@ void CPed::SetAimFlag(float heading) {
 	((void(__thiscall *)(CPed *, float))0x50B5B0)(this, heading);
 }
 
+void CPed::Attack() {
+	((void(__thiscall *)(CPed *))0x52B070)(this);
+}
+
 void CPed::RestoreHeadingRate() {
 	((void(__thiscall *)(CPed *))0x4F17D0)(this);
 }
@@ -72,6 +83,10 @@ char CPed::ClearLookFlag() {
 
 void CPed::SetPointGunAt(CEntity* entity) {
 	((void(__thiscall *)(CPed *, CEntity*))0x52DDF0)(this, entity);
+}
+
+void CPed::ClearAttack() {
+	((void(__thiscall *)(CPed *))0x52D120)(this);
 }
 
 void CPed::ClearWaitState() {
@@ -98,6 +113,10 @@ void CPed::RestorePreviousState() {
 	((void(__thiscall *)(CPed *))0x50C600)(this);
 }
 
+int CPed::SetAttack(CEntity* e) {
+	return ((int(__thiscall *)(CPed *, CEntity*))0x52D1C0)(this, e);
+}
+
 int CPed::SetAttackTimer(unsigned int time) {
 	return ((int(__thiscall *)(CPed *, unsigned int))0x4FCAB0)(this, time);
 }
@@ -108,4 +127,21 @@ int CPed::SetShootTimer(unsigned int time) {
 
 void CPed::Say(unsigned short arg0) {
 	((void(__thiscall *)(CPed *, unsigned int))0x5226B0)(this, arg0);
+}
+
+void CPed::SetDuck(int unk, int unk2) {
+	((void(__thiscall *)(CPed *, int, int))0x512C10)(this, unk, unk2);
+}
+
+void CPed::Duck() {
+	((void(__thiscall *)(CPed *))0x512A90)(this);
+}
+
+
+void CPed::RemoveWeaponAnims(int a2, float a3) {
+	((void(__thiscall *)(CPed *, int, float))0x5229B0)(this, a2, a3);
+}
+
+void CPed::Teleport(CVector posn) {
+	((void(__thiscall *)(CPed *, CVector))0x4F5690)(this, posn);
 }
