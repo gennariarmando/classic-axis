@@ -134,9 +134,9 @@ void CCamera::ProcessClassicAxis() {
 
 		// No jump while aiming.
 		if (CPed::m_bDoAiming)
-			CPatch::Set<BYTE>(0x4D73DC, 0x74);
-		else
 			CPatch::Set<BYTE>(0x4D73DC, 0x75);
+		else
+			CPatch::Set<BYTE>(0x4D73DC, 0x74);
 
 		// Replace settings with ours
 		TheCamera.m_f3rdPersonCHairMultX = 0.5f;
