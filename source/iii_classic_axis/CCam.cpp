@@ -112,11 +112,7 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 	else
 		TargetCoors = target;
 
-	static float fAlphaFix = 0.0f;
-	if (Alpha >= -0.15f)
-		fAlphaFix = 0.2f;
-	else
-		fAlphaFix = 0.0f;
+	float fAlphaFix = 0.2f;
 
 	TargetCoors.z = TargetCoors.z + 0.05f + m_fSyphonModeTargetZOffSet;
 
@@ -179,7 +175,7 @@ void CCam::ProcessFollowPedStandard(CVector const& target, float targetOrient) {
 	if (!GetSetting.bNoAutoFoc)
 	if ((pXboxPad->HasPadInHands() && FindPlayerPed()->m_fTotSpeed >= 0.06f) && !LookingBehind) {
 		Beta = CGeneral::GetATanOfXY(Dist.x, Dist.y);
-		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d(), Dist.z);
+		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + fAlphaFix, Dist.z);
 	}
 	
 	while (Beta >= PI) Beta -= 2.0f * PI;
@@ -289,11 +285,7 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 
 	CVector TargetCoors = FindPlayerPed()->TransformFromObjectSpace(aimoffset);
 
-	static float fAlphaFix = 0.0f;
-	if (Alpha >= -0.15f)
-		fAlphaFix = 0.0f;
-	else
-		fAlphaFix = 0.0f;
+	float fAlphaFix = 0.0f;
 
 	CColPoint colpoint;
 	CEntity *e = NULL;
@@ -307,6 +299,8 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 	TargetCoors.z = TargetCoors.z + 0.05f + m_fSyphonModeTargetZOffSet - (sin(Alpha));
 
 	CVector Dist = Source - TargetCoors;
+	Dist.z -= fAlphaFix;
+
 	float Length = Dist.Magnitude();
 	float LengthTemp = 0.0f;
 
@@ -348,7 +342,7 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !LookingBehind) {
 		if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt)
 			Beta = CGeneral::GetATanOfXY(Source.x - CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt->m_matrix.pos.x, Source.y - CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pPointGunAt->m_matrix.pos.y);
-		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + DEGTORAD(2.0f * 10.0f), Dist.z + DEGTORAD(2.0f));
+		Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + fAlphaFix, Dist.z);
 	}
 
 	while (Beta >= PI) Beta -= 2.0f * PI;
@@ -380,6 +374,7 @@ void CCam::ProcessAimWeaponStandard(CVector const& target, float targetOrient) {
 
 	Dist = CVector(cos(Beta), sin(Beta), sin(Alpha));
 	Dist = Front + Dist * Length;
+	Dist.z += fAlphaFix;
 
 	Source = TargetCoors + Dist - Front;
 	SourceBeforeLookBehind = TargetCoors + Dist;
@@ -462,11 +457,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 
 	CVector VehSize = (CModelInfo::ms_modelInfoPtrs[CamTargetEntity->m_nModelIndex]->m_pColModel->m_boundBox.m_vecMax - CModelInfo::ms_modelInfoPtrs[CamTargetEntity->m_nModelIndex]->m_pColModel->m_boundBox.m_vecMin);
 	
-	static float fAlphaFix = 0.0f;
-	if (Alpha >= -0.15f)
-		fAlphaFix = 0.40f + sqrt(VehSize.z * VehSize.y) * 0.10f;
-	else
-		fAlphaFix = 0.0f;
+	float fAlphaFix = 0.40f + sqrt(VehSize.z * VehSize.y) * 0.10f;
 
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
 		VehSize += CVector(0.7, 4.6f, 0.7f);
@@ -530,7 +521,7 @@ void CCam::ProcessFollowVehicleStandard(CVector const& atarget, float targetOrie
 	if (!GetSetting.bNoAutoFoc)
 		if ((pXboxPad->HasPadInHands() && FindPlayerVehicle() && FindPlayerVehicle()->m_fTotSpeed > speed) || (((CTimer::m_snTimeInMilliseconds > m_dwTimeToRestoreMove)) && FindPlayerVehicle() && FindPlayerVehicle()->m_fTotSpeed > speed && !TheCamera.m_bCamDirectlyBehind && !TheCamera.m_bCamDirectlyInFront) && !LookingBehind) {
 			Beta = CGeneral::GetATanOfXY(Dist.x, Dist.y);
-			Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d(), Dist.z);
+			Alpha = CGeneral::GetATanOfXY(Dist.Magnitude2d() + fAlphaFix, Dist.z);
 		}
 
 	while (Alpha > PI) Alpha -= 2 * PI;

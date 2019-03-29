@@ -16,6 +16,7 @@ float &CCamera::m_fMouseAccelVertical = *(float*)0xA0D964;
 float &CCamera::m_fMouseAccelHorzntl = *(float*)0x94DBD0;
 
 char &m_ControlMethod = *(char*)0x86968B;
+bool CCamera::CCamera::m_bWalkSideways;
 
 static CPatch InjectPatches([]() {
 	CPatch::RedirectCall(0x46C694, CCamera::CamControlHook);
@@ -84,29 +85,31 @@ void CCamera::ProcessClassicAxis() {
 		if (!Pads->m_bDisablePlayerControls && !FindPlayerPed()->IsTypeMelee() && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && Cams->Mode == MODE_FOLLOWPED || Cams->Mode == MODE_1STPERSON || Cams->Mode == MODE_ROCKETLAUNCHER || Cams->Mode == MODE_SNIPER || Cams->Mode == MODE_M16_1STPERSON) {
 			if (FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy()) {
 				if (Pads->GetWeapon() && !FindPlayerPed()->CanWeRunAndFireWithWeapon() && !FindPlayerPed()->FirstPersonWeapons()) {
+					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 					FindPlayerPed()->m_placement.SetHeading(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
+					CCamera::m_bWalkSideways = true;
 				}
 				else if (CPed::m_bDoAiming) {
+					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 					FindPlayerPed()->m_placement.SetHeading(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
 					FindPlayerPed()->m_fRotationDest = FindPlayerHeading();
-					m_bWalkSideways = true;
+					CCamera::m_bWalkSideways = true;
 				}
 				else {
 					FindPlayerPed()->m_fRotationCur = FindPlayerPed()->m_fRotationCur;
 					FindPlayerPed()->m_fRotationDest = FindPlayerPed()->m_fRotationDest;
-					m_bWalkSideways = false;
+					CCamera::m_bWalkSideways = false;
 				}
 
 				FindPlayerPed()->m_placement.UpdateRW();
 			}
 
 			if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons() && s != STATE_ATTACK && s != STATE_FIGHT && s != STATE_FACE_PHONE && s != STATE_MAKE_PHONECALL && !Pads->DuckJustDown()) {			
-				FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 				FindPlayerPed()->SetPointGunAt(0);
 
 				m_bPointGunHasBeenCleared = false;
@@ -126,7 +129,7 @@ void CCamera::ProcessClassicAxis() {
 		}
 		else {
 			m_bPointGunHasBeenCleared = false;
-			m_bWalkSideways = false;
+			CCamera::m_bWalkSideways = false;
 		}
 
 		// Chainsaw temporary fix.

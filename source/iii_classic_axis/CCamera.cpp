@@ -79,7 +79,8 @@ void CCamera::ProcessClassicAxis() {
 
 		if (!Pads->m_bDisablePlayerControls && !FindPlayerPed()->IsTypeMelee() && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && Cams->Mode == MODE_FOLLOWPED || Cams->Mode == MODE_1STPERSON || Cams->Mode == MODE_ROCKETLAUNCHER || Cams->Mode == MODE_SNIPER || Cams->Mode == MODE_M16_1STPERSON) {
 			if (FindPlayerPed()->CanStrafeOrMouseControl() && !FindPlayerPed()->BeQuiteAndEasy()) {
-				if (Pads->GetWeapon() && !FindPlayerPed()->CanWeRunAndFireWithWeapon() && !FindPlayerPed()->FirstPersonWeapons()) {
+				if (Pads->GetWeapon() && !FindPlayerPed()->CanWeRunAndFireWithWeapon() && !FindPlayerPed()->FirstPersonWeapons()) {			
+					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 					FindPlayerPed()->m_matrix.SetRotateZOnly(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
@@ -87,6 +88,7 @@ void CCamera::ProcessClassicAxis() {
 					CCamera::m_bWalkSideways = true;
 				}
 				else if (CPed::m_bDoAiming) {
+					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 					FindPlayerPed()->m_matrix.SetRotateZOnly(fFrontalView);
 
 					FindPlayerPed()->m_fRotationCur = FindPlayerHeading();
@@ -102,7 +104,6 @@ void CCamera::ProcessClassicAxis() {
 				FindPlayerPed()->m_matrix.UpdateRW();
 
 				if (CPed::m_bDoAiming && !FindPlayerPed()->FirstPersonWeapons() && s != STATE_ATTACK && s != STATE_FIGHT) {
-					FindPlayerPed()->SetAimFlag(FindPlayerPed()->m_fRotationCur);
 					FindPlayerPed()->SetPointGunAt(0);
 
 					m_bPointGunHasBeenCleared = false;

@@ -212,7 +212,7 @@ public:
 public:
 	static char &m_nFadeColorsSet;
 	static char &m_bUseMouse3rdPerson;
-	bool m_bWalkSideways;
+	static bool m_bWalkSideways;
 
 public:
 	static void CamControlHook();
