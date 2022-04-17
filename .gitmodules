@@ -1,0 +1,3 @@
+[submodule "vendor/ModUtils"]
+	path = vendor/ModUtils
+	url = https://github.com/CookiePLMonster/ModUtils
