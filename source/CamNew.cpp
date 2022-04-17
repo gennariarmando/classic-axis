@@ -11,6 +11,7 @@
 #include "CWorld.h"
 #include "CScene.h"
 #include "CDraw.h"
+#include "CFont.h"
 
 using namespace plugin;
 
@@ -28,29 +29,24 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	const bool aimingWeaponChanges = classicAxis.isAiming;
 	const bool usingController = classicAxis.pXboxPad->HasPadInHands();
 
-	CVector t;
+	RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
 	if (aimingWeaponChanges) {
-		RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
-
-		CVector aimOffset = CVector(0.5f, 1.0f, 0.1f);
-
-		if (TheCamera.m_fPedZoomIndicator == 1.0)
-			aimOffset = CVector(0.425f, 0.935f, 0.105f);
-
-		t = TransformFromObjectSpace(e->m_matrix, e->GetHeading(), aimOffset);
+		CVector aimOffset = CVector(0.5f, 0.0f, 0.5f);
+		targetCoords = TransformFromObjectSpace(e->m_matrix, e->GetHeading(), aimOffset);
 
 		CEntity* entity = NULL;
 		CColPoint colPoint;
 
-		if (CWorld::ProcessLineOfSight(t, m_vecSource, colPoint, entity, true, false, false, true, false, true, true)) {
-			t = target;
+		if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, false, false, true, false, true, true)) {
+			targetCoords = target;
 		}
 	}
 	else {
-		t = target;
+		targetCoords = target;
+
+		targetCoords.z += m_fSyphonModeTargetZOffSet;
 	}
-	t.z += m_fSyphonModeTargetZOffSet;
-	t.z += heightOffset;
+	targetCoords.z += heightOffset;
 
 	CVector dist = m_vecSource - targetCoords;
 
@@ -65,17 +61,6 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	}
 
 	float length = dist.Magnitude();
-	float lengthTemp = 0.0f;
-
-	lengthTemp += sin(m_fVerticalAngle) * 10.0f;
-
-	if (lengthTemp <= 0.0f)
-		lengthTemp = 0.0f;
-	if (lengthTemp >= 10.0f)
-		lengthTemp = 10.0f;
-
-	length += lengthTemp;
-
 	float idealLength = 0.0f;
 	if (TheCamera.m_fPedZoomIndicator == 1.0f) idealLength = 2.090556f;
 	if (TheCamera.m_fPedZoomIndicator == 2.0f) idealLength = 3.34973f;
@@ -93,7 +78,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 		dist.z = 0.0f;
 	}
 
-	length = 0.25f + (dist.Magnitude() / 2) + TheCamera.m_fPedZoomValueSmooth;
+	if (aimingWeaponChanges)
+		length = 2.0f;
+	else
+		length = 0.25f + (dist.Magnitude() / 2) + TheCamera.m_fPedZoomValueSmooth;
 
 	bool lockMovement = false;
 	CEntity* p = e->m_pPointGunAt;
@@ -143,8 +131,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	while (m_fHorizontalAngle >= M_PI) m_fHorizontalAngle -= 2.0f * M_PI;
 	while (m_fHorizontalAngle < -M_PI) m_fHorizontalAngle += 2.0f * M_PI;
 
-	if (m_fVerticalAngle > DegToRad(45.0f))
-		m_fVerticalAngle = DegToRad(45.0f);
+	if (m_fVerticalAngle > DegToRad(60.0f))
+		m_fVerticalAngle = DegToRad(60.0f);
 	else if (m_fVerticalAngle < -DegToRad(89.5f))
 		m_fVerticalAngle = -DegToRad(89.5f);
 
@@ -171,7 +159,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	m_vecFront = CVector(cos(m_fVerticalAngle) * cos(m_fHorizontalAngle), cos(m_fVerticalAngle) * sin(m_fHorizontalAngle), sin(m_fVerticalAngle));
 	m_vecSource = targetCoords - m_vecFront * length;
 
-	t.z -= heightOffset;
+	targetCoords.z -= heightOffset;
 
 	m_vecTargetCoorsForFudgeInter = targetCoords;
 
@@ -219,10 +207,6 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	CWorld::pIgnoreEntity = NULL;
 
 	GetVectorsReadyForRW();
-
-	targetCoords.x = interpF(targetCoords.x, t.x, 0.5f * CTimer::ms_fTimeStep);
-	targetCoords.y = interpF(targetCoords.y, t.y, 0.5f * CTimer::ms_fTimeStep);
-	targetCoords.z = interpF(targetCoords.z, t.z, 0.5f * CTimer::ms_fTimeStep);
 }
 
 void CCamNew::GetVectorsReadyForRW() {

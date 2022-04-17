@@ -31,6 +31,10 @@ ClassicAxis::ClassicAxis() {
 	// Fps to 3rd - m16.
 	plugin::patch::SetChar(0x4F1F72 + 2, -1);
 
+	// No fight cam
+	plugin::patch::Nop(0x469226, 9);
+	plugin::patch::Nop(0x469260, 9);
+
 	auto playerMovementType = [](int, int) {
 		int moveType = TYPE_WALKAROUND;
 
@@ -57,12 +61,15 @@ ClassicAxis::ClassicAxis() {
 	for (int i = 0; i < 3; i++)
 		plugin::patch::RedirectCall(playerShootingDirectionAddr[i], (int(__fastcall*)(int, int))playerShootingDirection);
 
-	auto zero = []() { return; };
+	auto zero = []() { };
 	plugin::patch::RedirectCall(0x468E46, (void(__cdecl*)())zero);
 
+	plugin::patch::Nop(0x4F21A0, 6);
+	plugin::patch::Nop(0x4F21CA, 7);
+
 	auto camControl = [](int, int) {
-		TheCamera.m_bUseMouse3rdPerson = false;
-		FrontEndMenuManager.m_ControlMethod = 1;
+		TheCamera.m_bUseMouse3rdPerson = true;
+		FrontEndMenuManager.m_ControlMethod = 0;
 	
 		if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget)
 			TheCamera.CamControl();
@@ -75,52 +82,40 @@ ClassicAxis::ClassicAxis() {
 		eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
 
 		classicAxis.isAiming = false;
-		if (playa && !classicAxis.WaitOrAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa)) {
-			if (pad) {
-				if (pad->GetTarget())
-					classicAxis.isAiming = true;
+		if (playa && pad && !classicAxis.WaitOrAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget()) {
+			classicAxis.isAiming = true;
 
-				if (Mode == 4) {
-					CEntity* p = playa->m_pPointGunAt;
-					if (playa->m_bHasLockOnTarget && p) {
-						front = CGeneral::GetATanOfXY(cam.m_vecSource.x - p->GetPosition().x, cam.m_vecSource.y - p->GetPosition().y) + M_PI_2;
-					
-						if ((classicAxis.pXboxPad->HasPadInHands() &&
-							(pad->m_nMode == 4 ? pad->NewState.LeftShoulder2 <= 30 /*(Pads->NewState.DPadDown || Pads->NewState.DPadUp || Pads->NewState.DPadLeft || Pads->NewState.DPadRight)*/ : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y)
-							playa->ClearWeaponTarget();
-					}
-					else {
-						if (/*!pad->SecondaryFireJustDown() && */(pad->m_nMode == 4 ? pad->NewState.LeftShoulder2 >= 30 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
-							playa->FindWeaponLockOnTarget();
-					}
+			CEntity* p = playa->m_pPointGunAt;
+			if (playa->m_bHasLockOnTarget && p) {
+				front = CGeneral::GetATanOfXY(cam.m_vecSource.x - p->GetPosition().x, cam.m_vecSource.y - p->GetPosition().y) + M_PI_2;
 
-					if (classicAxis.isAiming) {
-						playa->m_fRotationCur = front;
-						playa->m_fRotationDest = front;
+				if ((classicAxis.pXboxPad->HasPadInHands() &&
+					(pad->m_nMode == 4 ? pad->NewState.LeftShoulder2 <= 30 /*(Pads->NewState.DPadDown || Pads->NewState.DPadUp || Pads->NewState.DPadLeft || Pads->NewState.DPadRight)*/ : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || CPad::NewMouseControllerState.X || CPad::NewMouseControllerState.Y)
+					playa->ClearWeaponTarget();
+			}
+			else {
+				if (/*!pad->SecondaryFireJustDown() && */(pad->m_nMode == 4 ? pad->NewState.LeftShoulder2 >= 30 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
+					playa->FindWeaponLockOnTarget();
+			}
 
-						playa->m_matrix.SetRotateZOnly(FindPlayerPed()->m_fRotationCur);
+			playa->m_fRotationCur = front;
+			playa->m_fRotationDest = front;
 
-						//playa->SetLookFlag(front, false);
-						playa->SetAimFlag(front);
+			playa->m_matrix.SetRotateZOnly(FindPlayerPed()->m_fRotationCur);
 
-						if (!playa->m_bHasLockOnTarget)
-							playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch() * 0.75f;
+			playa->SetLookFlag(front, false);
+			playa->SetAimFlag(front);
 
-						if (!pad->GetWeapon()) {
-							FindPlayerPed()->SetPointGunAt(NULL);
-							classicAxis.wasPointing = true;
-							return;
-						}
-					}
-					else {
-						goto clear;
-					}
-				}
+			if (!playa->m_bHasLockOnTarget)
+				playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch() * 0.75f;
+
+			if (!pad->GetWeapon()) {
+				playa->SetPointGunAt(NULL);
+				classicAxis.wasPointing = true;
 			}
 		}
 
-	clear:
-		if (!pad->GetTarget()) {
+		if (!classicAxis.isAiming) {
 			if (classicAxis.wasPointing) {
 				playa->ClearPointGunAt();
 				classicAxis.wasPointing = false;
@@ -136,6 +131,12 @@ ClassicAxis::ClassicAxis() {
 		CPlayerPed* playa = FindPlayerPed();
 		CPad* pad = CPad::GetPad(0);
 
+		if (!playa)
+			return;
+
+		if (!pad)
+			return;
+
 		const eWeaponType weaponType = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponType;
 		char Mode = cam.m_nCamMode;
 		float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
@@ -145,7 +146,7 @@ ClassicAxis::ClassicAxis() {
 		eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
 
 		CSprite2d* crosshair = &CHud::Sprites[HUD_SITEM16];
-		if (crosshair) {
+		if (crosshair && crosshair->m_pTexture) {
 			if (classicAxis.isAiming) {
 				if (!playa->m_pVehicle && Mode == 4 && !CPad::GetPad(0)->m_bDisablePlayerControls) {
 					if (!playa->m_bHasLockOnTarget && (weaponType >= WEAPONTYPE_COLT45 && weaponType <= WEAPONTYPE_M16) || weaponType == WEAPONTYPE_FLAMETHROWER)
@@ -170,14 +171,14 @@ ClassicAxis::ClassicAxis() {
 		MENUACTION_RESTOREDEF, "FET_DEF", 0,  MENUPAGE_CONTROLLER_PC,
 		MENUACTION_CHANGEMENU, "FEDS_TB", 0,  MENUPAGE_NONE,
 	};
-
+	
 	plugin::patch::Set(0x611930 + sizeof(CMenuScreen) * 35, controllerSetup);
-
+	
 	// Weapon cycle
 	auto processWeaponSwitch = [](CPlayerPed* ped, int, CPad* pad) {
 		if (!classicAxis.isAiming)
 			return ped->ProcessWeaponSwitch(pad);
-
+	
 		return;
 	};
 	plugin::patch::RedirectCall(0x4F0464, (void(__fastcall*)(CPlayerPed*, int, CPad*))processWeaponSwitch);
@@ -195,6 +196,11 @@ bool ClassicAxis::WaitOrAim(CPed* ped) {
 bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
 	const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 	eWeaponFire info = CWeaponInfo::GetWeaponInfo(weaponType)->m_eWeaponFire;
+
+	switch (weaponType) {
+	case WEAPONTYPE_SNIPERRIFLE:
+		return false;
+	}
 
 	return info == WEAPON_FIRE_AREA_EFFECT || info == WEAPON_FIRE_INSTANT_HIT;
 }

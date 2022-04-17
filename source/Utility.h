@@ -61,14 +61,5 @@ static CVector TransformFromObjectSpace(CMatrix const& m, float heading, CVector
 		CVector point = operator*(m, offset);
 		return point;
 	}
-	else {
-		float c = cosf(heading);
-		float s = sinf(heading);
-
-		CVector result;
-		result.x = c * offset.x - s * offset.y + m.pos.x;
-		result.y = c * offset.y + s * offset.x + m.pos.y;
-		result.z = m.pos.z + offset.z;
-		return result;
-	}
+	return CVector();
 }
