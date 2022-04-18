@@ -114,16 +114,16 @@ static void DrawTriangle(float x, float y, float scale, float angle, CRGBA const
 
 static void DrawTarget(float x, float y, float dist, CRGBA const& col) {
 	dist = clamp(dist, 0.2f, 1.0f);
-	float offset = 28.0f * dist;
+	float offset = 32.0f * dist;
 
 	x -= Scale(offset);
-	DrawTriangle(x, y, Scale(14.0f), DegToRad(45.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(13.0f), DegToRad(45.0f), col);
+	DrawTriangle(x, y, Scale(14.0f), DegToRad(50.0f), CRGBA(0, 0, 0, 255));
+	DrawTriangle(x, y, Scale(13.0f), DegToRad(50.0f), col);
 	x += Scale(offset);
 
 	x += Scale(offset);
-	DrawTriangle(x, y, Scale(14.0f), DegToRad(-45.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(13.0f), DegToRad(-45.0f), col);
+	DrawTriangle(x, y, Scale(14.0f), DegToRad(-50.0f), CRGBA(0, 0, 0, 255));
+	DrawTriangle(x, y, Scale(13.0f), DegToRad(-50.0f), col);
 	x -= Scale(offset);
 
 	y += Scale(offset * 1.5f);

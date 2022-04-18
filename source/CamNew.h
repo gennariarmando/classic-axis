@@ -9,6 +9,8 @@ enum {
 class CCamNew : public CCam {
 public:
 	CVector targetCoords;
+	float lengthBeforeAiming;
+	bool wasAiming;
 
 public:
 	void Process_FollowPed(CVector const& target, float targetOrient, float, float);

@@ -21,6 +21,9 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	CPed* e = (CPed*)m_pCamTargetEntity;
 	const char weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
 
+	if (e->m_nType != ENTITY_TYPE_PED)
+		return;
+
 	m_fFOV = 70.0f;
 
 	const float minDist = 2.0f;
@@ -40,6 +43,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 		if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, false, false, true, false, true, true)) {
 			targetCoords = target;
 		}
+
+		wasAiming = true;
 	}
 	else {
 		targetCoords = target;
@@ -68,10 +73,19 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	else if (length > maxDist)
 		dist *= maxDist / length;
 
-	if (aimingWeaponChanges)
+	if (aimingWeaponChanges) {
 		length = minDist;
-	else
+	}
+	else {
 		length = dist.Magnitude();
+
+		if (wasAiming) {
+			length = lengthBeforeAiming;
+			wasAiming = false;
+		}
+
+		lengthBeforeAiming = length;
+	}
 
 	bool lockMovement = false;
 	CEntity* p = e->m_pPointGunAt;
@@ -86,6 +100,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	else if (usingController && !aimingWeaponChanges && !m_bLookingBehind) {
 		m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
 		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
+	}
+
+	if ((TheCamera.GetFading() && TheCamera.GetFadingDirection() == 1 && CDraw::FadeValue > 45) ||
+		CDraw::FadeValue > 200) {
+		lockMovement = true;
 	}
 
 	while (m_fHorizontalAngle >= M_PI) m_fHorizontalAngle -= 2.0f * M_PI;
@@ -154,8 +173,9 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	m_vecFront = CVector(cos(m_fVerticalAngle) * cos(m_fHorizontalAngle), cos(m_fVerticalAngle) * sin(m_fHorizontalAngle), sin(m_fVerticalAngle));
 	m_vecSource = targetCoords - m_vecFront * length;
 	m_vecSourceBeforeLookBehind = targetCoords + m_vecFront;
-	m_vecTargetCoorsForFudgeInter = targetCoords;
 	targetCoords.z -= heightOffset;
+
+	m_vecTargetCoorsForFudgeInter = targetCoords;
 
 	m_vecFront = targetCoords - m_vecSource;
 	m_vecFront.Normalise();

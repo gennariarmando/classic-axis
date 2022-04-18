@@ -60,8 +60,8 @@ ClassicAxis::ClassicAxis() {
 		return moveType;
 	};
 
-	int playerShootingDirectionAddr[] = { 0x4E6562, 0x55D88B, 0x560C25, 0x561E63 };
-	for (int i = 0; i < 4; i++)
+	int playerShootingDirectionAddr[] = { 0x4E6562, 0x55D88B, 0x560C25, 0x561E63, 0x4EDAD1 };
+	for (int i = 0; i < 5; i++)
 		plugin::patch::RedirectCall(playerShootingDirectionAddr[i], (int(__fastcall*)(int, int))playerShootingDirection);
 
 	auto zero = []() { };
@@ -98,7 +98,8 @@ ClassicAxis::ClassicAxis() {
 		CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
 		classicAxis.isAiming = false;
-		if (playa && pad && classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget()) {
+
+		if (playa && pad && classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0) {
 			classicAxis.isAiming = true;
 
 			CEntity* p = playa->m_pPointGunAt;
@@ -120,17 +121,20 @@ ClassicAxis::ClassicAxis() {
 			playa->m_fRotationCur = front;
 			playa->m_fRotationDest = front;
 
-			playa->m_matrix.SetRotateZOnly(FindPlayerPed()->m_fRotationCur);
+			playa->m_matrix.SetRotateZOnly(playa->m_fRotationCur);
 
+			playa->m_nLookTimer = 0;
 			playa->SetLookFlag(front, false);
 			playa->SetAimFlag(front);
 
 			if (!playa->m_bHasLockOnTarget)
-				playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch() * 0.75f;
+				playa->m_fFPSMoveHeading = interpF(playa->m_fFPSMoveHeading, TheCamera.Find3rdPersonQuickAimPitch(), 0.2f * CTimer::ms_fTimeStep);
+
+			playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, DegToRad(-40.0f), DegToRad(40.0f));
 
 			CAnimBlendAssociation* anim = plugin::CallAndReturn<CAnimBlendAssociation*, 0x4055C0>(playa->m_pRwClump, info->m_AnimToPlay);
 			bool point = true;
-			if (anim && (anim->m_fCurrentTime - anim->m_fTimeStep < info->m_fAnimLoopEnd)) {
+			if (anim && (anim->m_fCurrentTime < info->m_fAnimLoopEnd)) {
 				point = false;
 			}
 
@@ -144,9 +148,27 @@ ClassicAxis::ClassicAxis() {
 		}
 
 		if (!classicAxis.isAiming) {
-			if (playa && classicAxis.wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
-				playa->ClearPointGunAt();
-				classicAxis.wasPointing = false;
+			if (playa) {
+				if (classicAxis.wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
+					playa->ClearPointGunAt();
+					playa->ClearWeaponTarget();
+					classicAxis.wasPointing = false;
+				}
+
+				if (pad->GetWeapon() && classicAxis.IsAbleToAim(playa) && !classicAxis.IsTypeMelee(playa) && !info->m_bCanAimWithArm && !info->m_bThrow && !info->m_bHeavy && !info->m_b1stPerson) {
+					playa->m_fRotationDest = front;
+					playa->m_fRotationCur = CGeneral::LimitRadianAngle(playa->m_fRotationCur);
+					float angle = playa->m_fRotationDest;
+
+					if (playa->m_fRotationCur - M_PI > playa->m_fRotationDest) {
+						angle += 2 * M_PI;
+					}
+					else if (M_PI + playa->m_fRotationCur < playa->m_fRotationDest) {
+						angle -= 2 * M_PI;
+					}
+
+					playa->m_fRotationCur += (angle - playa->m_fRotationCur) * 0.5f;
+				}
 			}
 		}
 	};
@@ -176,7 +198,7 @@ ClassicAxis::ClassicAxis() {
 		CSprite2d* crosshair = &CHud::Sprites[HUD_SITEM16];
 		if (crosshair) {
 			if (classicAxis.isAiming) {
-				if (!playa->m_pVehicle && Mode == 4 && !CPad::GetPad(0)->m_bDisablePlayerControls) {
+				if (!playa->m_bInVehicle && Mode == 4 && !CPad::GetPad(0)->m_bDisablePlayerControls) {
 					if (!playa->m_bHasLockOnTarget && (weaponType >= WEAPONTYPE_COLT45 && weaponType <= WEAPONTYPE_M16) || weaponType == WEAPONTYPE_FLAMETHROWER)
 						crosshair->Draw(CRect(x - Scale(22.0f), y - Scale(22.0f), x + Scale(22.0f), y + Scale(22.0f)), CRGBA(255, 255, 255, 255));
 				}
@@ -196,11 +218,11 @@ ClassicAxis::ClassicAxis() {
 			return;
 
 		float health = static_cast<CPed*>(e)->m_fHealth / 100.0f;
-		CRGBA col = CRGBA((1.0f - health) * 255, health * 255, 5, 255);
+		CRGBA col = CRGBA((1.0f - health) * 255, health * 255, 0, 255);
 		if (health <= 0.0f)
 			col = CRGBA(0, 0, 0, 255);
 
-		y -= 8.0f;
+		y -= 6.0f;
 		DrawTarget(x, y - (h / 2), (w / 128.0f), col);
 	};
 	plugin::patch::RedirectCall(0x564E3E, (void(__cdecl*)(float, float, float, float, float, unsigned __int8, unsigned __int8, unsigned __int8, __int16, float, unsigned __int8))drawAutoAimCrosshair);
@@ -225,6 +247,9 @@ ClassicAxis::ClassicAxis() {
 			return ped->ProcessWeaponSwitch(pad);
 	};
 	plugin::patch::RedirectCall(0x4F0464, (void(__fastcall*)(CPlayerPed*, int, CPad*))processWeaponSwitch);
+
+	// No smooth weapon spray
+	plugin::patch::Nop(0x4F13C8, 9);
 }
 
 bool ClassicAxis::IsAbleToAim(CPed* ped) {
@@ -251,8 +276,24 @@ bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
 
 	switch (weaponType) {
 	case WEAPONTYPE_FLAMETHROWER:
-		return true;
+		info->m_bCanAim = true;
+		break;
 	}
 
 	return (info->m_bCanAim || info->m_bCanAimWithArm) && !info->m_bThrow && !info->m_bHeavy && !info->m_b1stPerson;
+}
+
+bool ClassicAxis::IsTypeMelee(CPed* ped) {
+	const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
+
+	switch (weaponType) {
+	case WEAPONTYPE_UNARMED:
+	case WEAPONTYPE_BASEBALLBAT:
+	case WEAPONTYPE_MOLOTOV:
+	case WEAPONTYPE_GRENADE:
+	case WEAPONTYPE_DETONATOR:
+		return true;
+	}
+
+	return false;
 }
