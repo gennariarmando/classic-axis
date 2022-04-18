@@ -25,7 +25,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
 	const float minDist = 2.0f;
 	const float maxDist = 2.0f + TheCamera.m_fPedZoomValueSmooth;
-	const float heightOffset = 0.75f;
+	const float heightOffset = 0.5f;
 	const bool aimingWeaponChanges = classicAxis.isAiming;
 	const bool usingController = classicAxis.pXboxPad->HasPadInHands();
 
@@ -43,15 +43,15 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	}
 	else {
 		targetCoords = target;
-
 		targetCoords.z += m_fSyphonModeTargetZOffSet;
 	}
+
 	targetCoords.z += heightOffset;
 
 	CVector dist = m_vecSource - targetCoords;
 
 	if (m_bResetStatics) {
-		m_fHorizontalAngle = CGeneral::GetATanOfXY(dist.x, dist.y);
+		m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
 		m_fVerticalAngle = 0.0f;
 
 		dist = maxDist * CVector(cosf(m_fVerticalAngle) * cosf(m_fHorizontalAngle), cosf(m_fVerticalAngle) * sinf(m_fHorizontalAngle), sinf(m_fVerticalAngle));
@@ -61,36 +61,29 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	}
 
 	float length = dist.Magnitude();
-	float idealLength = 0.0f;
-	if (TheCamera.m_fPedZoomIndicator == 1.0f) idealLength = 2.090556f;
-	if (TheCamera.m_fPedZoomIndicator == 2.0f) idealLength = 3.34973f;
-	if (TheCamera.m_fPedZoomIndicator == 3.0f) idealLength = 4.704914f;
-	if (TheCamera.m_fPedZoomIndicator == 4.0f) idealLength = 2.090556f;
-
-	if (length != 0.0f) {
-		dist.x *= idealLength / length;
-		dist.y *= idealLength / length;
-		dist.z *= idealLength / length;
-	}
-	else {
-		dist.x = 1.0f;
-		dist.y = 1.0f;
-		dist.z = 0.0f;
-	}
+	if (length == 0.0f)
+		dist = CVector(1.0f, 1.0f, 0.0f);
+	else if (length < minDist)
+		dist *= minDist / length;
+	else if (length > maxDist)
+		dist *= maxDist / length;
 
 	if (aimingWeaponChanges)
-		length = 2.0f;
+		length = minDist;
 	else
-		length = 0.25f + (dist.Magnitude() / 2) + TheCamera.m_fPedZoomValueSmooth;
+		length = dist.Magnitude();
 
 	bool lockMovement = false;
 	CEntity* p = e->m_pPointGunAt;
 	if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !m_bLookingBehind && p) {
-		m_fHorizontalAngle = CGeneral::GetATanOfXY(m_vecSource.x - p->GetPosition().x, m_vecSource.y - p->GetPosition().y) + M_PI;
-		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
+		CVector target = p->GetPosition();
+		CVector targetDiff = (m_vecSource - target);
+
+		m_fHorizontalAngle = CGeneral::GetATanOfXY(targetDiff.x, targetDiff.y) + M_PI;
+		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(targetDiff), -targetDiff.z) + M_1_PI / 2;
 		lockMovement = true;
 	}
-	else if (usingController && !aimingWeaponChanges && FindPlayerPed()->m_fMoveSpeed > 0.06f && !m_bLookingBehind) {
+	else if (usingController && !aimingWeaponChanges && !m_bLookingBehind) {
 		m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
 		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
 	}
@@ -100,7 +93,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	while (m_fVerticalAngle >= M_PI) m_fVerticalAngle -= 2.0f * M_PI;
 	while (m_fVerticalAngle < -M_PI) m_fVerticalAngle += 2.0f * M_PI;
 
-	float lookLeftRight = lookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
+	float lookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
 	float lookUpDown = CPad::GetPad(0)->LookAroundUpDown();
 	float mouseX = CPad::GetPad(0)->NewMouseControllerState.X;
 	float mouseY = CPad::GetPad(0)->NewMouseControllerState.Y;
@@ -155,13 +148,14 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
 	if (TheCamera.m_bUseTransitionBeta)
 		m_fHorizontalAngle = CGeneral::GetATanOfXY(-cos(m_fTransitionBeta), -sin(m_fTransitionBeta));
+	
+	m_fDistanceBeforeChanges = (m_vecSource - targetCoords).Magnitude();
 
 	m_vecFront = CVector(cos(m_fVerticalAngle) * cos(m_fHorizontalAngle), cos(m_fVerticalAngle) * sin(m_fHorizontalAngle), sin(m_fVerticalAngle));
 	m_vecSource = targetCoords - m_vecFront * length;
-
-	targetCoords.z -= heightOffset;
-
+	m_vecSourceBeforeLookBehind = targetCoords + m_vecFront;
 	m_vecTargetCoorsForFudgeInter = targetCoords;
+	targetCoords.z -= heightOffset;
 
 	m_vecFront = targetCoords - m_vecSource;
 	m_vecFront.Normalise();

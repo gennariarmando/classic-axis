@@ -14,7 +14,7 @@ public:
 
 public:
 	ClassicAxis();
-	bool WaitOrAim(CPed* ped);
+	bool IsAbleToAim(CPed* ped);
 	bool IsWeaponPossiblyCompatible(CPed* ped);
 };
 
