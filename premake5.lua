@@ -45,7 +45,6 @@ project "classic-axis"
 		includedirs {
 			"$(PLUGIN_SDK_DIR)/plugin_vc/",
 			"$(PLUGIN_SDK_DIR)/plugin_vc/game_vc/",
-			"$(RWD3D9_DIR)/source"
 		}
 		targetname "ClassicAxisVC"
 		debugdir "$(GTA_VC_DIR)"

@@ -17,6 +17,7 @@ public:
 	bool IsAbleToAim(CPed* ped);
 	bool IsWeaponPossiblyCompatible(CPed* ped);
 	bool IsTypeMelee(CPed* ped);
+	bool IsTypeTwoHanded(CPed* ped);
 };
 
 extern ClassicAxis classicAxis;

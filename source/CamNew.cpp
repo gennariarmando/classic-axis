@@ -15,19 +15,21 @@
 
 using namespace plugin;
 
-CColPoint* gaTempSphereColPoints = (CColPoint*)0x6E64C0;
-
 void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float, float) {
 	CPed* e = (CPed*)m_pCamTargetEntity;
 	const char weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
-
+	
 	if (e->m_nType != ENTITY_TYPE_PED)
 		return;
 
 	m_fFOV = 70.0f;
 
 	const float minDist = 2.0f;
+#ifdef GTA3
 	const float maxDist = 2.0f + TheCamera.m_fPedZoomValueSmooth;
+#else
+	const float maxDist = 2.0f + TheCamera.m_fPedZoomValueScript;
+#endif
 	const float heightOffset = 0.5f;
 	const bool aimingWeaponChanges = classicAxis.isAiming;
 	const bool usingController = classicAxis.pXboxPad->HasPadInHands();
@@ -35,12 +37,22 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
 	if (aimingWeaponChanges) {
 		CVector aimOffset = CVector(0.5f, 0.0f, 0.5f);
-		targetCoords = TransformFromObjectSpace(e->m_matrix, e->GetHeading(), aimOffset);
+
+#ifdef GTA3
+		CMatrix& mat = e->m_matrix;
+#else
+		CMatrix& mat = e->m_placement;
+#endif
+		targetCoords = TransformFromObjectSpace(mat, e->GetHeading(), aimOffset);
 
 		CEntity* entity = NULL;
 		CColPoint colPoint;
 
-		if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, false, false, true, false, true, true)) {
+		if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, false, false, true, false, true, true
+#ifndef GTA3
+		, false
+#endif
+		)) {
 			targetCoords = target;
 		}
 
@@ -66,18 +78,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	}
 
 	float length = dist.Magnitude();
-	if (length == 0.0f)
-		dist = CVector(1.0f, 1.0f, 0.0f);
-	else if (length < minDist)
-		dist *= minDist / length;
-	else if (length > maxDist)
-		dist *= maxDist / length;
-
 	if (aimingWeaponChanges) {
 		length = minDist;
 	}
 	else {
-		length = dist.Magnitude();
+		length = maxDist;
 
 		if (wasAiming) {
 			length = lengthBeforeAiming;
@@ -102,10 +107,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
 	}
 
-	if ((TheCamera.GetFading() && TheCamera.GetFadingDirection() == 1 && CDraw::FadeValue > 45) ||
-		CDraw::FadeValue > 200) {
-		lockMovement = true;
-	}
+	//if ((TheCamera.GetFading() && TheCamera.m_nFadingDirection == 1 && CDraw::FadeValue > 45) ||
+	//	CDraw::FadeValue > 200) {
+	//	lockMovement = true;
+	//}
 
 	while (m_fHorizontalAngle >= M_PI) m_fHorizontalAngle -= 2.0f * M_PI;
 	while (m_fHorizontalAngle < -M_PI) m_fHorizontalAngle += 2.0f * M_PI;
@@ -143,8 +148,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	while (m_fHorizontalAngle >= M_PI) m_fHorizontalAngle -= 2.0f * M_PI;
 	while (m_fHorizontalAngle < -M_PI) m_fHorizontalAngle += 2.0f * M_PI;
 
-	if (m_fVerticalAngle > DegToRad(60.0f))
-		m_fVerticalAngle = DegToRad(60.0f);
+	if (m_fVerticalAngle > DegToRad(45.0f))
+		m_fVerticalAngle = DegToRad(45.0f);
 	else if (m_fVerticalAngle < -DegToRad(89.5f))
 		m_fVerticalAngle = -DegToRad(89.5f);
 
@@ -184,7 +189,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	CColPoint colPoint;
 	CWorld::pIgnoreEntity = e;
 	
-	if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, true, false, true, false, true, true)) {
+	if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, true, false, true, false, true, true
+#ifndef GTA3
+		, false
+#endif
+	)) {
 		m_vecSource = colPoint.m_vecPoint;
 
 		CVector d = m_vecSource - targetCoords;
@@ -202,7 +211,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 	}
 
 	CWorld::pIgnoreEntity = e;
-	if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, true, true, true, false, true, true)) {
+	if (CWorld::ProcessLineOfSight(targetCoords, m_vecSource, colPoint, entity, true, true, true, true, false, true, true
+#ifndef GTA3
+		, false
+#endif
+	)) {
 		m_vecSource = colPoint.m_vecPoint;
 
 		CVector d = m_vecSource - targetCoords;

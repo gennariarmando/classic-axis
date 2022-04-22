@@ -15,7 +15,11 @@ static float RadToDeg(float x) {
 }
 
 static float GetAspectRatio() {
+#ifdef GTA3
 	float& fScreenAspectRatio = *(float*)0x5F53C0;
+#else
+	float& fScreenAspectRatio = *(float*)0x94DD38;
+#endif
 	return fScreenAspectRatio;
 }
 
@@ -78,55 +82,45 @@ static void Draw2DPolygon(float x1, float y1, float x2, float y2, float x3, floa
 	RwRenderStateSet(rwRENDERSTATESHADEMODE, (void*)rwSHADEMODEGOURAUD);
 }
 
-static CVector2D RotateUV(CVector2D& uv, float rotation, CVector2D center) {
-	CVector2D v = {
-		cos(rotation) * (uv.x - center.x) + sin(rotation) * (uv.y - center.y) + center.x,
-		cos(rotation) * (uv.y - center.y) - sin(rotation) * (uv.x - center.x) + center.y
-	};
-
-	uv = v;
-	return v;
+static void RotateVertices(CVector2D* rect, float x, float y, float angle) {
+	float xold, yold;
+	//angle /= 57.2957795;
+	float _cos = cosf(angle);
+	float _sin = sinf(angle);
+	for (unsigned int i = 0; i < 4; i++) {
+		xold = rect[i].x;
+		yold = rect[i].y;
+		rect[i].x = x + (xold - x) * _cos + (yold - y) * _sin;
+		rect[i].y = y - (xold - x) * _sin + (yold - y) * _cos;
+	}
 }
-
 static void DrawTriangle(float x, float y, float scale, float angle, CRGBA const& col) {
 	CVector2D posn[4];
-	posn[0].x = 0.0f; posn[0].y = 0.0f; posn[1].x = 1.0f; posn[1].y = 0.0f;
-	posn[2].x = 0.5f; posn[2].y = 1.0f; posn[3].x = 0.5f; posn[3].y = 1.0f;
-
-	float w = scale * 0.8f;
+	float w = scale * 0.7f;
 	float h = scale;
 
-	for (unsigned int i = 0; i < 4; i++) {
-		posn[i].x *= w;
-		posn[i].y *= h;
+	posn[1].x = x - (w * 0.5f); posn[1].y = y - (h * 0.5f); posn[0].x = x + (w * 0.5f); posn[0].y = y - (h * 0.5f);
+	posn[3].x = x; posn[3].y = y + (h * 0.5f);	posn[2].x = x; posn[2].y = y + (h * 0.5f);
 
-		posn[i].x += x;
-		posn[i].y += y;
-	}
-
-	RotateUV(posn[0], angle, CVector2D(x + (w / 2), y + (h / 2)));
-	RotateUV(posn[1], angle, CVector2D(x + (w / 2), y + (h / 2)));
-	RotateUV(posn[2], angle, CVector2D(x + (w / 2), y + (h / 2)));
-	RotateUV(posn[3], angle, CVector2D(x + (w / 2), y + (h / 2)));
-
+	RotateVertices(posn, x, y, angle);
 	Draw2DPolygon(posn[0].x, posn[0].y, posn[1].x, posn[1].y, posn[2].x, posn[2].y, posn[3].x, posn[3].y, CRGBA(col));
 }
 
 static void DrawTarget(float x, float y, float dist, CRGBA const& col) {
-	dist = clamp(dist, 0.2f, 1.0f);
-	float offset = 32.0f * dist;
+	dist = clamp(dist, 0.3f, 1.0f);
+	float offset = 30.0f * dist;
 
 	x -= Scale(offset);
 	DrawTriangle(x, y, Scale(14.0f), DegToRad(50.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(13.0f), DegToRad(50.0f), col);
+	DrawTriangle(x, y, Scale(12.0f), DegToRad(50.0f), col);
 	x += Scale(offset);
 
 	x += Scale(offset);
 	DrawTriangle(x, y, Scale(14.0f), DegToRad(-50.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(13.0f), DegToRad(-50.0f), col);
+	DrawTriangle(x, y, Scale(12.0f), DegToRad(-50.0f), col);
 	x -= Scale(offset);
 
 	y += Scale(offset * 1.5f);
 	DrawTriangle(x, y, Scale(14.0f), DegToRad(180.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(13.0f), DegToRad(180.0f), col);
+	DrawTriangle(x, y, Scale(12.0f), DegToRad(180.0f), col);
 }
