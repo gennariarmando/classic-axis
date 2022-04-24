@@ -328,7 +328,11 @@ ClassicAxis::ClassicAxis() {
 		if (health <= 0.0f)
 			col = CRGBA(0, 0, 0, 255);
 
-		y -= 12.0f;
+#ifdef GTA3
+		y -= ScaleY(12.0f);
+#else
+		y -= ScaleY(6.0f);
+#endif
 		DrawTarget(x, y, (w / 128.0f), col);
 	};
 #ifdef GTA3
