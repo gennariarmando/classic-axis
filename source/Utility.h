@@ -105,7 +105,7 @@ static void RotateVertices(CVector2D* rect, float x, float y, float angle) {
 }
 static void DrawTriangle(float x, float y, float scale, float angle, CRGBA const& col) {
 	CVector2D posn[4];
-	float w = scale * 0.5f;
+	float w = scale * 0.6f;
 	float h = scale;
 
 	posn[1].x = x - (w * 0.5f); posn[1].y = y - (h * 0.5f); posn[0].x = x + (w * 0.5f); posn[0].y = y - (h * 0.5f);

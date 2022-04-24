@@ -140,14 +140,18 @@ ClassicAxis::ClassicAxis() {
 	};
 
 #ifdef GTA3
-	plugin::ThiscallEvent <plugin::AddressList<0x4EFE50, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
+	plugin::ThiscallEvent <plugin::AddressList<0x4EFE50, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
 #else
-	plugin::ThiscallEvent <plugin::AddressList<0x53739F, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
+	plugin::ThiscallEvent <plugin::AddressList<0x53739F, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
 #endif
 	onProcessingPlayerControl += [](CPed* ped) {
 		CPlayerPed* playa = FindPlayerPed();
+		if (!playa)
+			return;
+
 		if (playa != ped)
 			return;
+
 		CPad* pad = CPad::GetPad(0);
 		CCam cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
 		char mode = cam.m_nCamMode;
@@ -226,26 +230,26 @@ ClassicAxis::ClassicAxis() {
 			classicAxis.wasPointing = true;
 
 #ifdef GTAVC
-			if (playa->m_nPedFlags.bIsDucking)
+			if (playa->m_nPedFlags.bIsDucking && !classicAxis.wasCrouching) {
+				playa->StartFightAttack(1);
 				classicAxis.wasCrouching = true;
+			}
 #endif
 		}
 
 		if (!classicAxis.isAiming) {
-			if (playa) {
-				if (classicAxis.wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
-					playa->ClearPointGunAt();
-					playa->ClearWeaponTarget();
+			if (classicAxis.wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
+				playa->ClearPointGunAt();
+				playa->ClearWeaponTarget();
 
 #ifdef GTAVC
-					if (classicAxis.wasCrouching) {
-						CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
-						classicAxis.wasCrouching = false;
+				if (classicAxis.wasCrouching) {
+					CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
+					classicAxis.wasCrouching = false;
 				}
 #endif				
-					classicAxis.wasPointing = false;
+				classicAxis.wasPointing = false;
 			}
-		}
 		}
 
 		if (playa->m_ePedState == PEDSTATE_ATTACK && classicAxis.IsAbleToAim(playa) && ((!classicAxis.IsTypeMelee(playa) && classicAxis.IsTypeTwoHanded(playa))
@@ -407,13 +411,6 @@ ClassicAxis::ClassicAxis() {
 			ped->m_nPedFlags.bCrouchWhenShooting = false;
 			ped->RestorePreviousState();
 		}
-		else {
-			if (classicAxis.isAiming && ped->m_nPedFlags.bIsDucking) {
-				ped->StartFightAttack(0);
-				classicAxis.wasCrouching = true;
-			}
-		}
-
 	};
 
 	plugin::ThiscallEvent <plugin::AddressList<0x534968, plugin::H_CALL, 0x535355, plugin::H_CALL, 0x5355F5, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPick2N<CPed*, 0, char, 1>, void(CPed*, char)> onClearDuck;
