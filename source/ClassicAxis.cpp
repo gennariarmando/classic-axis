@@ -137,8 +137,17 @@ ClassicAxis::ClassicAxis() {
 
 		if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget)
 			TheCamera.CamControl();
+	};
 
+#ifdef GTA3
+	plugin::ThiscallEvent <plugin::AddressList<0x4EFE50, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
+#else
+	plugin::ThiscallEvent <plugin::AddressList<0x53739F, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
+#endif
+	onProcessingPlayerControl += [](CPed* ped) {
 		CPlayerPed* playa = FindPlayerPed();
+		if (playa != ped)
+			return;
 		CPad* pad = CPad::GetPad(0);
 		CCam cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
 		char mode = cam.m_nCamMode;
@@ -148,9 +157,6 @@ ClassicAxis::ClassicAxis() {
 		eWeaponType weaponType = currentWeapon.m_eWeaponType;
 		CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 		classicAxis.isAiming = false;
-
-		if (!playa && !pad)
-			return;
 
 		if (!pad->DisablePlayerControls && classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && mode == 4) {
 			classicAxis.isAiming = true;
@@ -213,10 +219,10 @@ ClassicAxis::ClassicAxis() {
 
 			if (!currentWeapon.HasWeaponAmmoToBeUsed())
 				point = false;
-			
+
 			if (point)
 				playa->SetPointGunAt(NULL);
-			
+
 			classicAxis.wasPointing = true;
 
 #ifdef GTAVC
@@ -235,11 +241,11 @@ ClassicAxis::ClassicAxis() {
 					if (classicAxis.wasCrouching) {
 						CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
 						classicAxis.wasCrouching = false;
-					}
+				}
 #endif				
 					classicAxis.wasPointing = false;
-				}
 			}
+		}
 		}
 
 		if (playa->m_ePedState == PEDSTATE_ATTACK && classicAxis.IsAbleToAim(playa) && ((!classicAxis.IsTypeMelee(playa) && classicAxis.IsTypeTwoHanded(playa))
