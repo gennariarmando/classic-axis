@@ -152,7 +152,7 @@ ClassicAxis::ClassicAxis() {
 		if (!playa && !pad)
 			return;
 
-		if (classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && mode == 4) {
+		if (!pad->DisablePlayerControls && classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && mode == 4) {
 			classicAxis.isAiming = true;
 
 			CEntity* p = playa->m_pPointGunAt;
@@ -369,6 +369,9 @@ ClassicAxis::ClassicAxis() {
 	
 	// Weapon cycle
 	auto processWeaponSwitch = [](CPlayerPed* ped, int, CPad* pad) {
+		if (ped != FindPlayerPed())
+			return;
+
 		if (!classicAxis.isAiming)
 			return ped->ProcessWeaponSwitch(pad);
 	};
@@ -388,6 +391,9 @@ ClassicAxis::ClassicAxis() {
 #ifdef GTAVC
 	plugin::ThiscallEvent <plugin::AddressList<0x53491B, plugin::H_CALL, 0x535326, plugin::H_CALL, 0x5355C6, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPick3N<CPed*, 0, int, 1, __int16, 2>, void(CPed*, int, __int16)> onDucking;
 	onDucking += [](CPed* ped, int, __int16) {
+		if (ped != FindPlayerPed())
+			return;
+
 		const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 		CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
@@ -406,8 +412,29 @@ ClassicAxis::ClassicAxis() {
 
 	plugin::ThiscallEvent <plugin::AddressList<0x534968, plugin::H_CALL, 0x535355, plugin::H_CALL, 0x5355F5, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPick2N<CPed*, 0, char, 1>, void(CPed*, char)> onClearDuck;
 	onClearDuck += [](CPed* ped, char) {
+		if (ped != FindPlayerPed())
+			return;
+
 		ped->ClearPointGunAt();
 		classicAxis.wasCrouching = false;
+	};
+
+	// Duck while targetting fix
+	plugin::ThiscallEvent <plugin::AddressList<0x534D64, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPlayerPed*, 0>, void(CPlayerPed*)> onFindingNewLockOnTarget;
+	onFindingNewLockOnTarget += [](CPlayerPed* ped) {
+		if (ped != FindPlayerPed())
+			return;
+
+		const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
+		CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+		if ((!ped->m_nPedFlags.bIsDucking || info->m_bCrouchFire)) {
+
+		}
+		else {
+			ped->ClearPointGunAt();
+			ped->ClearWeaponTarget();
+		}
 	};
 #endif
 }
