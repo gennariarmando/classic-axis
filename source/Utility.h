@@ -3,8 +3,13 @@
 #include "extensions/Screen.h"
 #include "CSprite2d.h"
 
+#define defaultScreenWidth 640.0f
+#define defaultScreenHeight 448.0f
+#define defaultAspectRatio defaultScreenWidth / defaultScreenHeight
+#define flashItem(on, off) (CTimer::m_snTimeInMillisecondsPauseMode % on + off < on)
 #define interpF(a, b, f) a = a + (f) * (b - a)
 #define clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
+#define isNearlyEqualF(a, b, t) (fabs(a - b) <= t)
 
 static float DegToRad(float x) {
 	return (x * M_PI / 180.0f);
@@ -23,8 +28,12 @@ static float GetAspectRatio() {
 	return fScreenAspectRatio;
 }
 
-static float Scale(float a) {
-	return static_cast<int>(a * GetAspectRatio());
+static float ScaleX(float a) {
+	return static_cast<float>(a * SCREEN_WIDTH / defaultScreenWidth) * defaultAspectRatio / GetAspectRatio();
+}
+
+static float ScaleY(float a) {
+	return static_cast<float>(a * SCREEN_HEIGHT / defaultScreenHeight);
 }
 
 static float DotProduct(const CVector& v1, const CVector& v2) {
@@ -108,19 +117,19 @@ static void DrawTriangle(float x, float y, float scale, float angle, CRGBA const
 
 static void DrawTarget(float x, float y, float dist, CRGBA const& col) {
 	dist = clamp(dist, 0.3f, 1.0f);
-	float offset = 30.0f * dist;
+	float offset = 20.0f * dist;
 
-	x -= Scale(offset);
-	DrawTriangle(x, y, Scale(14.0f), DegToRad(50.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(12.0f), DegToRad(50.0f), col);
-	x += Scale(offset);
+	x += ScaleY(-offset);
+	DrawTriangle(x, y, ScaleY(9.0f), DegToRad(50.0f), CRGBA(0, 0, 0, col.a));
+	DrawTriangle(x, y, ScaleY(8.0f), DegToRad(50.0f), col);
+	x += ScaleY(offset);
 
-	x += Scale(offset);
-	DrawTriangle(x, y, Scale(14.0f), DegToRad(-50.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(12.0f), DegToRad(-50.0f), col);
-	x -= Scale(offset);
+	x += ScaleY(offset);
+	DrawTriangle(x, y, ScaleY(9.0f), DegToRad(-50.0f), CRGBA(0, 0, 0, col.a));
+	DrawTriangle(x, y, ScaleY(8.0f), DegToRad(-50.0f), col);
+	x += ScaleY(-offset);
 
-	y += Scale(offset * 1.5f);
-	DrawTriangle(x, y, Scale(14.0f), DegToRad(180.0f), CRGBA(0, 0, 0, 255));
-	DrawTriangle(x, y, Scale(12.0f), DegToRad(180.0f), col);
+	y += ScaleY(offset * 1.5f);
+	DrawTriangle(x, y, ScaleY(9.0f), DegToRad(180.0f), CRGBA(0, 0, 0, col.a));
+	DrawTriangle(x, y, ScaleY(8.0f), DegToRad(180.0f), col);
 }

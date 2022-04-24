@@ -11,6 +11,7 @@ public:
 	class IGInputPad* pXboxPad;
 	bool isAiming;
 	bool wasPointing;
+	bool wasCrouching;
 
 public:
 	ClassicAxis();
