@@ -16,8 +16,7 @@
 using namespace plugin;
 
 void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float, float) {
-	CPed* e = (CPed*)m_pCamTargetEntity;
-	const char weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
+	CPed* e = static_cast<CPed*>(m_pCamTargetEntity);
 	
 	if (e->m_nType != ENTITY_TYPE_PED)
 		return;
@@ -26,9 +25,9 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
 	const float minDist = 2.0f;
 #ifdef GTA3
-	const float maxDist = 2.0f + TheCamera.m_fPedZoomValueSmooth;
+	const float maxDist = minDist + TheCamera.m_fPedZoomValueSmooth;
 #else
-	const float maxDist = 2.0f + TheCamera.m_fPedZoomValueScript;
+	const float maxDist = minDist + TheCamera.m_fPedZoomValueScript;
 #endif
 	const float heightOffset = 0.5f;
 	const bool aimingWeaponChanges = classicAxis.isAiming;
@@ -102,7 +101,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(targetDiff), -targetDiff.z) + M_1_PI / 2;
 		lockMovement = true;
 	}
-	else if (usingController && !aimingWeaponChanges && !m_bLookingBehind) {
+	else if (usingController && !aimingWeaponChanges && !m_bLookingBehind && !cameraInput) {
 		m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
 		m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
 	}
@@ -137,8 +136,12 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 		alphaOffset = lookUpDown * TheCamera.m_fMouseAccelHorzntal * m_fFOV / 80.0f;
 	}
 
-	if (betaOffset || alphaOffset || lockMovement)
+	if (betaOffset || alphaOffset || lockMovement) {
 		m_bRotating = false;
+		cameraInput = true;
+	}
+	else
+		cameraInput = false;
 
 	if (!lockMovement) {
 		m_fHorizontalAngle += betaOffset;

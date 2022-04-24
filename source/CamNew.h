@@ -11,6 +11,7 @@ public:
 	CVector targetCoords;
 	float lengthBeforeAiming;
 	bool wasAiming;
+	bool cameraInput;
 
 public:
 	void Process_FollowPed(CVector const& target, float targetOrient, float, float);

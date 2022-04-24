@@ -141,6 +141,7 @@ ClassicAxis::ClassicAxis() {
 		CCam cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
 		char mode = cam.m_nCamMode;
 		float front = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
+		float height = 0.0f;
 
 		CWeapon& currentWeapon = playa->m_aWeapons[playa->m_nCurrentWeapon];
 		eWeaponType weaponType = currentWeapon.m_eWeaponType;
@@ -158,7 +159,9 @@ ClassicAxis::ClassicAxis() {
 			float mouseY = CPad::GetPad(0)->NewMouseControllerState.Y;
 
 			if (playa->m_bHasLockOnTarget && p) {
-				front = CGeneral::GetATanOfXY(cam.m_vecSource.x - p->GetPosition().x, cam.m_vecSource.y - p->GetPosition().y) + M_PI_2;
+				CVector diff = cam.m_vecSource - p->GetPosition();
+				front = CGeneral::GetATanOfXY(diff.x, diff.y) + M_PI_2;
+				height = CGeneral::GetATanOfXY(Magnitude2d(diff), diff.z);
 
 				if ((classicAxis.pXboxPad->HasPadInHands() &&
 					(pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f))
@@ -186,6 +189,8 @@ ClassicAxis::ClassicAxis() {
 
 			if (!playa->m_bHasLockOnTarget)
 				playa->m_fFPSMoveHeading = interpF(playa->m_fFPSMoveHeading, TheCamera.Find3rdPersonQuickAimPitch(), 0.2f * CTimer::ms_fTimeStep);
+			else
+				playa->m_fFPSMoveHeading = height;
 
 			playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, DegToRad(-30.0f), DegToRad(30.0f));
 
@@ -219,8 +224,6 @@ ClassicAxis::ClassicAxis() {
 					playa->ClearWeaponTarget();
 					classicAxis.wasPointing = false;
 				}
-
-
 			}
 		}
 
