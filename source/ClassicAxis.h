@@ -19,6 +19,8 @@ public:
     bool IsWeaponPossiblyCompatible(CPed* ped);
     bool IsTypeMelee(CPed* ped);
     bool IsTypeTwoHanded(CPed* ped);
+    void DrawCrosshair();
+    void DrawAutoAimTarget();
 };
 
 extern ClassicAxis classicAxis;

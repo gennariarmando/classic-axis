@@ -13,6 +13,7 @@
 #include "CHud.h"
 #include "CAnimBlendAssociation.h"
 #include "CAnimManager.h"
+#include "CSprite.h"
 
 ClassicAxis classicAxis;
 
@@ -286,37 +287,6 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::RedirectCall(0x46C694, (void(__fastcall*)(int, int))camControl);
 #endif
 
-    // Crosshair
-    auto drawCrosshair = []() {
-        CCam cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
-        CPlayerPed* playa = FindPlayerPed();
-        CPad* pad = CPad::GetPad(0);
-
-        if (!playa)
-            return;
-
-        if (!pad)
-            return;
-
-        const eWeaponType weaponType = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponType;
-        char Mode = cam.m_nCamMode;
-        float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
-        float y = RsGlobal.maximumHeight * TheCamera.m_f3rdPersonCHairMultY;
-
-        CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
-        eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
-
-        CSprite2d* crosshair = &CHud::Sprites[HUD_SITEM16];
-        if (crosshair) {
-            if (classicAxis.isAiming) {
-                if (!playa->m_bInVehicle && Mode == 4 && !CPad::GetPad(0)->DisablePlayerControls) {
-                    if (!playa->m_bHasLockOnTarget && classicAxis.IsWeaponPossiblyCompatible(playa))
-                        crosshair->Draw(CRect(x - ScaleX(16.0f), y - ScaleY(16.0f), x + ScaleX(16.0f), y + ScaleY(16.0f)), CRGBA(255, 255, 255, 255));
-                }
-
-            }
-        }
-    };
 #ifdef GTA3
     plugin::patch::SetChar(0x50554C + 1, 0);
     plugin::patch::SetChar(0x505627 + 1, 0);
@@ -325,39 +295,15 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::RedirectCall(0x557713, (void(__fastcall*)(int _this, int, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11))ss);
     plugin::patch::RedirectCall(0x5577F7, (void(__fastcall*)(int _this, int, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11))ss);
 #endif
-    plugin::Events::drawHudEvent += drawCrosshair;
-
-    // Draw marker
-    auto drawAutoAimCrosshair = [](float x, float y, float z, float w, float h, unsigned __int8 r, unsigned __int8 g, unsigned __int8 b, __int16 intens, float recipz, unsigned __int8 a) {
-        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
-        RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
-        RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
-        RwRenderStateSet(rwRENDERSTATEFOGENABLE, reinterpret_cast<void*>(FALSE));
-        RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(FALSE));
-        RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(FALSE));
-
-        CPed* playa = FindPlayerPed();
-        CEntity* e = playa->m_pPointGunAt;
-        if (!playa && !e)
-            return;
-
-        float health = static_cast<CPed*>(e)->m_fHealth / 100.0f;
-        CRGBA col = CRGBA((1.0f - health) * 255, health * 255, 0, 250);
-        if (health <= 0.0f)
-            col = CRGBA(0, 0, 0, 255);
-
-#ifdef GTA3
-        y -= ScaleY(12.0f);
-#else
-        y -= ScaleY(6.0f);
-#endif
-        DrawTarget(x, y, (w / 128.0f), col);
+    plugin::Events::drawHudEvent += [] {
+        classicAxis.DrawCrosshair();
+        classicAxis.DrawAutoAimTarget();
     };
+
 #ifdef GTA3
-    plugin::patch::RedirectCall(0x564E3E, (void(__cdecl*)(float, float, float, float, float, unsigned __int8, unsigned __int8, unsigned __int8, __int16, float, unsigned __int8))drawAutoAimCrosshair);
+    plugin::patch::Nop(0x48E0C7, 5);
 #else
-    plugin::patch::RedirectCall(0x5D4F74, (void(__cdecl*)(float, float, float, float, float, unsigned __int8, unsigned __int8, unsigned __int8, __int16, float, unsigned __int8))drawAutoAimCrosshair);
-    plugin::patch::Nop(0x5D4FDD, 5);
+    plugin::patch::Nop(0x4A654C, 5);
 #endif
 
     // Menu
@@ -535,4 +481,82 @@ bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
     return (info->m_bCanAim || info->m_bHeavy) && !info->m_bCanAimWithArm && !info->m_b1stPerson;
+}
+
+void ClassicAxis::DrawCrosshair() {
+    CCam cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
+    CPlayerPed* playa = FindPlayerPed();
+    CPad* pad = CPad::GetPad(0);
+
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(FALSE));
+
+    if (playa) {
+        const eWeaponType weaponType = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponType;
+        char Mode = cam.m_nCamMode;
+        float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
+        float y = RsGlobal.maximumHeight * TheCamera.m_f3rdPersonCHairMultY;
+
+        CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+        eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
+
+        CSprite2d* crosshair = &CHud::Sprites[HUD_SITEM16];
+        if (crosshair) {
+            if (classicAxis.isAiming) {
+                if (!playa->m_bInVehicle && Mode == 4 && !pad->DisablePlayerControls) {
+                    if (!playa->m_bHasLockOnTarget && classicAxis.IsWeaponPossiblyCompatible(playa))
+                        crosshair->Draw(CRect(x - ScaleX(16.0f), y - ScaleY(16.0f), x + ScaleX(16.0f), y + ScaleY(16.0f)), CRGBA(255, 255, 255, 255));
+                }
+
+            }
+        }
+    }
+}
+
+void ClassicAxis::DrawAutoAimTarget() {
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(FALSE));
+
+    CPed* playa = FindPlayerPed();
+
+    if (playa) {
+        CEntity* e = playa->m_pPointGunAt;
+        if (e) {
+            CRGBA col = { 0, 255, 0, 255 };
+            CPed* ep = NULL;
+            RwV3d in;
+
+            in.x = e->GetPosition().x;
+            in.y = e->GetPosition().y;
+            in.z = e->GetPosition().z;
+
+            if (e->m_nType = ENTITY_TYPE_PED) {
+                CPed* ep = static_cast<CPed*>(e);
+
+                if (ep) {
+                    ep->m_PedIK.GetComponentPosition(in, 1);
+                    in.z += 0.25f;
+
+                    float health = ep->m_fHealth / 100.0f;
+                    col = CRGBA((1.0f - health) * 255, health * 255, 0, 245);
+                    if (health <= 0.0f)
+                        col = CRGBA(0, 0, 0, 255);
+                }
+            }            
+
+            RwV3d out;
+            float w, h;
+            if (CSprite::CalcScreenCoors(in, &out, &w, &h, false)) {
+                DrawTarget(out.x, out.y, w / 128.0f, col);
+            }
+        }
+    }
 }
