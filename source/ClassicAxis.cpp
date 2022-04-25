@@ -208,9 +208,11 @@ ClassicAxis::ClassicAxis() {
             playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
             playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, DegToRad(-50.0f), DegToRad(50.0f));
 
+            float torsoYaw = 0.0f;
             if (!info->m_bCanAimWithArm)
-                playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sTorso, 0.0f, playa->m_fFPSMoveHeading, playa->m_PedIK.ms_torsoInfo);
+                torsoYaw = playa->m_fFPSMoveHeading;
 
+            playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sTorso, 0.0f, torsoYaw, playa->m_PedIK.ms_torsoInfo);
             playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sLowerArm, 0.0f, playa->m_fFPSMoveHeading, playa->m_PedIK.ms_lowerArmInfo);
 
 #ifdef GTA3
