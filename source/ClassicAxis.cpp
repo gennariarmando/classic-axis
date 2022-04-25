@@ -117,11 +117,11 @@ ClassicAxis::ClassicAxis() {
     for (int i = 0; i < ARRAYSIZE(playerShootingDirectionAddr); i++)
         plugin::patch::RedirectCall(playerShootingDirectionAddr[i], (int(__fastcall*)(int, int))playerShootingDirection);
 
-    auto using3rd = [](CCam*, int) { return false; };
+    auto using3rd = [](CCam*, int) { };
 #ifdef GTA3
-    plugin::patch::RedirectCall(0x468E46, (bool(__fastcall*)(CCam*, int))using3rd);
+    plugin::patch::RedirectCall(0x468E46, (void(__fastcall*)(CCam*, int))using3rd);
 #else
-    plugin::patch::RedirectCall(0x4711DB, (bool(__fastcall*)(CCam*, int))using3rd);
+    plugin::patch::RedirectCall(0x4711DB, (void(__fastcall*)(CCam*, int))using3rd);
 #endif
 #if GTA3
     auto clearWeaponTarget = [](CPlayerPed* playa, int) {
@@ -374,6 +374,9 @@ ClassicAxis::ClassicAxis() {
     // Weapon cycle
     auto processWeaponSwitch = [](CPlayerPed* ped, int, CPad* pad) {
         if (ped != FindPlayerPed())
+            return;
+
+        if (ped->m_ePedState == ePedState::PEDSTATE_AIMGUN || ped->m_ePedState == PEDSTATE_ATTACK)
             return;
 
         if (!classicAxis.isAiming)
