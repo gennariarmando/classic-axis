@@ -2,18 +2,23 @@
 #include "CCam.h"
 
 enum {
-	TYPE_WALKAROUND,
-	TYPE_STRAFE,
+    TYPE_WALKAROUND,
+    TYPE_STRAFE,
 };
 
-class CCamNew : public CCam {
+class CCamNew {
 public:
-	CVector targetCoords;
-	float lengthBeforeAiming;
-	bool wasAiming;
-	bool cameraInput;
+    CCam* cam;
+    CVector targetCoords;
+    float lengthBeforeAiming;
+    bool wasAiming;
+    bool cameraInput;
 
 public:
-	void Process_FollowPed(CVector const& target, float targetOrient, float, float);
-	void GetVectorsReadyForRW();
+    CCamNew();
+    ~CCamNew();
+    void Process_FollowPed(CVector const& target, float targetOrient, float, float);
+    void GetVectorsReadyForRW();
 };
+
+extern std::shared_ptr<CCamNew> CamNew;
