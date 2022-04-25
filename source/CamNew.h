@@ -6,18 +6,19 @@ enum {
     TYPE_STRAFE,
 };
 
+
 class CCamNew {
 public:
     CCam* cam;
     CVector targetCoords;
     float lengthBeforeAiming;
-    bool wasAiming;
     bool cameraInput;
 
 public:
     CCamNew();
     ~CCamNew();
     void Process_FollowPed(CVector const& target, float targetOrient, float, float);
+    void Process_AimWeapon(CVector const& target, float targetOrient, float, float);
     void GetVectorsReadyForRW();
 };
 

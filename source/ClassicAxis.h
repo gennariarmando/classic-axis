@@ -1,10 +1,8 @@
 #pragma once
-#include "plugin.h"
-
-
 #define GINPUT_COMPILE_CROSSCOMPATIBLE_VERSION
 #include "GInputAPI.h"
 
+#include "Settings.h"
 
 class ClassicAxis {
 public:
@@ -12,6 +10,9 @@ public:
     bool isAiming;
     bool wasPointing;
     bool wasCrouching;
+    bool ignoreRotation;
+    bool forceRealMoveAnim;
+    Settings settings;
 
 public:
     ClassicAxis();
@@ -21,6 +22,7 @@ public:
     bool IsTypeTwoHanded(CPed* ped);
     void DrawCrosshair();
     void DrawAutoAimTarget();
+    void ClearWeaponTarget(CPlayerPed* ped);
 };
 
 extern ClassicAxis classicAxis;
