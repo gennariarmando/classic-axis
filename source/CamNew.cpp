@@ -155,7 +155,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
 
-    previousPedZoomIndicator = TheCamera.PedZoomIndicator;
+    previousPedZoomIndicator = TheCamera.m_fPedZoomIndicator;
     previousPedZoomValue = TheCamera.m_fPedZoomValue;
     previoudPedZoomValueSmooth = TheCamera.m_fPedZoomValueSmooth;
     previousPedZoomValueScript = TheCamera.m_fPedZoomValueScript;
@@ -268,7 +268,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
 
-    TheCamera.PedZoomIndicator = previousPedZoomIndicator;
+    TheCamera.m_fPedZoomIndicator = previousPedZoomIndicator;
     TheCamera.m_fPedZoomValue = previousPedZoomValue;
     TheCamera.m_fPedZoomValueSmooth = previoudPedZoomValueSmooth;
     TheCamera.m_fPedZoomValueScript = previousPedZoomValueScript;
