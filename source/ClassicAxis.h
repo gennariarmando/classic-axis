@@ -13,16 +13,21 @@ public:
     bool ignoreRotation;
     bool forceRealMoveAnim;
     Settings settings;
+    float previousVerticalAngle;
+    float previousHorizontalAngle;
 
 public:
     ClassicAxis();
+    void RotatePlayer(CPed* ped, float angle, bool smooth);
     bool IsAbleToAim(CPed* ped);
+    bool IsType1stPerson(CPed* ped);
     bool IsWeaponPossiblyCompatible(CPed* ped);
     bool IsTypeMelee(CPed* ped);
     bool IsTypeTwoHanded(CPed* ped);
     void DrawCrosshair();
     void DrawAutoAimTarget();
     void ClearWeaponTarget(CPlayerPed* ped);
+    void ProcessPlayerPedControl(CPed* ped);
 };
 
 extern ClassicAxis classicAxis;

@@ -30,6 +30,8 @@ ClassicAxis::ClassicAxis() {
         classicAxis.wasCrouching = false;
         classicAxis.ignoreRotation = false;
         classicAxis.forceRealMoveAnim = false;
+        classicAxis.previousHorizontalAngle = 0.0f;
+        classicAxis.previousVerticalAngle = 0.0f;
 
         CamNew = std::make_shared<CCamNew>();
     };
@@ -168,156 +170,8 @@ ClassicAxis::ClassicAxis() {
     plugin::ThiscallEvent <plugin::AddressList<0x53739F, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CPed*, 0>, void(CPed*)> onProcessingPlayerControl;
 #endif
     onProcessingPlayerControl += [](CPed* ped) {
-        CPlayerPed* playa = FindPlayerPed();
-        if (!playa)
-            return;
-
-        if (playa != ped)
-            return;
-
-        CPad* pad = CPad::GetPad(0);
-        CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
-        short& mode = cam.m_nCamMode;
-        float front = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
-
-        CWeapon& currentWeapon = playa->m_aWeapons[playa->m_nCurrentWeapon];
-        eWeaponType weaponType = currentWeapon.m_eWeaponType;
-        CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
-
-        if (pad->NewKeyState.lmenu && classicAxis.settings.altKeyWalk) {
-            playa->m_fMoveSpeed = 0.0f;
-        }
-
-        classicAxis.isAiming = false;
-        classicAxis.ignoreRotation = false;
-
-        if (!pad->DisablePlayerControls && classicAxis.IsAbleToAim(playa) && classicAxis.IsWeaponPossiblyCompatible(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && mode == 4) {
-            classicAxis.isAiming = true;
-
-            CEntity* p = playa->m_pPointGunAt;
-            float mouseX = CPad::GetPad(0)->NewMouseControllerState.X;
-            float mouseY = CPad::GetPad(0)->NewMouseControllerState.Y;
-            bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
-
-            if (disableAutoAim) {
-                if (playa->m_bHasLockOnTarget && p)
-                    classicAxis.ClearWeaponTarget(playa);
-            }
-            else {
-                if (playa->m_bHasLockOnTarget && p) {
-                    CVector diff = p->GetPosition() - playa->GetPosition();
-                    front = CGeneral::GetATanOfXY(diff.x, diff.y) - M_PI_2;
-
-                    if (((classicAxis.pXboxPad->HasPadInHands() &&
-                        (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f)) ||
-                        diff.Magnitude() < 1.0f)
-                        classicAxis.ClearWeaponTarget(playa);
-                }
-                else {
-                    if (/*!pad->SecondaryFireJustDown() && */(pad->Mode == 4 ? pad->NewState.LeftShoulder2 >= 100 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
-                        playa->FindWeaponLockOnTarget();
-                }
-            }
-
-            if (!classicAxis.ignoreRotation) {
-                playa->m_fRotationCur = front;
-                playa->m_fRotationDest = front;
-#ifdef GTA3
-                playa->m_matrix.SetRotateZOnly(playa->m_fRotationCur);
-#else
-                playa->m_placement.SetRotateZOnly(playa->m_fRotationCur);
-#endif
-            }
-#ifdef GTA3
-            playa->SetLookFlag(front, true);
-#else
-            playa->SetLookFlag(front, false, false);
-#endif
-            playa->SetAimFlag(front);
-
-            playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
-            playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, -DegToRad(45.0f), DegToRad(45.0f));
-
-            float torsoPitch = 0.0f;
-            if (!info->m_bCanAimWithArm || playa->m_nPedFlags.bIsDucking) {
-                torsoPitch = playa->m_fFPSMoveHeading;
-            }
-
-            if (playa->m_vecMoveSpeed.Magnitude() < 0.01f)
-                classicAxis.forceRealMoveAnim = true;
-
-            playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sHead, playa->m_PedIK.m_sHead.m_fYaw, 0.0f, playa->m_PedIK.ms_headInfo);
-            playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sTorso, 0.0f, torsoPitch, playa->m_PedIK.ms_torsoInfo);
-            playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sLowerArm, 0.0f, playa->m_fFPSMoveHeading, playa->m_PedIK.ms_lowerArmInfo);
-
-#ifdef GTA3
-            CAnimBlendAssociation* anim = plugin::CallAndReturn<CAnimBlendAssociation*, 0x4055C0>(playa->m_pRwClump, info->m_AnimToPlay);
-#else
-            CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, info->m_AnimToPlay);
-#endif
-            bool point = true;
-
-            if (anim && anim->m_fCurrentTime < info->m_fAnimLoopEnd) {
-                point = false;
-            }
-
-            if (pad->GetWeapon())
-                point = false;
-
-            if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING)
-                point = false;
-
-            if (!currentWeapon.HasWeaponAmmoToBeUsed()) {
-                playa->ProcessWeaponSwitch(pad);
-                point = false;
-            }
-
-            if (point)
-                playa->SetPointGunAt(NULL);
-
-            classicAxis.wasPointing = true;
-
-#ifdef GTAVC
-            if (playa->m_nPedFlags.bIsDucking && !classicAxis.wasCrouching) {
-                playa->StartFightAttack(1);
-                classicAxis.wasCrouching = true;
-            }
-#endif
-        }
-
-        if (!classicAxis.isAiming) {
-            if (classicAxis.wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
-                playa->ClearPointGunAt();
-                playa->ClearWeaponTarget();
-
-#ifdef GTAVC
-                if (classicAxis.wasCrouching) {
-                    CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
-                    classicAxis.wasCrouching = false;
-                }
-#endif				
-                classicAxis.wasPointing = false;
-            }
-        }
-
-        if (playa->m_ePedState == PEDSTATE_ATTACK && classicAxis.IsAbleToAim(playa) && ((!classicAxis.IsTypeMelee(playa) && classicAxis.IsTypeTwoHanded(playa))
-#ifndef GTA3
-            || (weaponType == WEAPONTYPE_CHAINSAW && playa->m_fTotSpeed > 0.05f)
-#endif
-            )) {
-            playa->m_fRotationDest = front;
-            playa->m_fRotationCur = CGeneral::LimitRadianAngle(playa->m_fRotationCur);
-            float angle = playa->m_fRotationDest;
-
-            if (playa->m_fRotationCur - M_PI > playa->m_fRotationDest) {
-                angle += 2 * M_PI;
-            }
-            else if (M_PI + playa->m_fRotationCur < playa->m_fRotationDest) {
-                angle -= 2 * M_PI;
-            }
-
-            playa->m_fRotationCur += (angle - playa->m_fRotationCur) * 0.02f;
-        }
+        CPlayerPed* playa = static_cast<CPlayerPed*>(ped);
+        classicAxis.ProcessPlayerPedControl(ped);
     };
 
 #ifdef GTA3
@@ -435,6 +289,53 @@ ClassicAxis::ClassicAxis() {
         }
     };
 #endif
+
+    // Make 1st cam mode point on the front
+#ifdef GTA3
+    plugin::ThiscallEvent <plugin::AddressList<0x4F1FDB, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick4N<CCam*, 0, int, 1, int, 2, int, 3>, void(CCam*, int, int, int)> onSet1stPersonPlayerCamMode;
+    plugin::patch::Nop(0x461B61, 10);
+    plugin::patch::Nop(0x4624A2, 10);
+#else
+    plugin::ThiscallEvent <plugin::AddressList<0x534A60, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick4N<CCam*, 0, int, 1, int, 2, int, 3>, void(CCam*, int, int, int)> onSet1stPersonPlayerCamMode;
+    plugin::patch::Nop(0x47949C, 10);
+    plugin::patch::Nop(0x47A289, 10);
+#endif
+
+    onSet1stPersonPlayerCamMode += [](CCam* cam, int, int, int) {
+        CPlayerPed* playa = FindPlayerPed();
+        float angle = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
+        classicAxis.RotatePlayer(playa, angle, false);
+        cam->m_fVerticalAngle = M_PI;
+    };
+}
+
+void ClassicAxis::RotatePlayer(CPed* ped, float angle, bool smooth) {
+    if (classicAxis.ignoreRotation)
+        return;
+
+    if (smooth) {
+        ped->m_fRotationDest = angle;
+        ped->m_fRotationCur = CGeneral::LimitRadianAngle(ped->m_fRotationCur);
+        float angle = ped->m_fRotationDest;
+
+        if (ped->m_fRotationCur - M_PI > ped->m_fRotationDest) {
+            angle += 2 * M_PI;
+        }
+        else if (M_PI + ped->m_fRotationCur < ped->m_fRotationDest) {
+            angle -= 2 * M_PI;
+        }
+
+        ped->m_fRotationCur += (angle - ped->m_fRotationCur) * 0.02f;
+    }
+    else {
+        ped->m_fRotationCur = angle;
+        ped->m_fRotationDest = angle;
+#ifdef GTA3
+        ped->m_matrix.SetRotateZOnly(ped->m_fRotationCur);
+#else
+        ped->m_placement.SetRotateZOnly(ped->m_fRotationCur);
+#endif
+    }
 }
 
 bool ClassicAxis::IsAbleToAim(CPed* ped) {
@@ -459,6 +360,13 @@ bool ClassicAxis::IsAbleToAim(CPed* ped) {
     default:
         return false;
     }
+}
+
+bool ClassicAxis::IsType1stPerson(CPed* ped) {
+    const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
+    CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    return !info->m_bCanAim && !info->m_bCanAimWithArm && info->m_b1stPerson;
 }
 
 bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
@@ -589,4 +497,140 @@ void ClassicAxis::ClearWeaponTarget(CPlayerPed* ped) {
     ped->m_pPointGunAt = NULL;
     TheCamera.ClearPlayerWeaponMode();
     gCrossHair.ClearCrossHair();
+}
+
+void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
+    CPlayerPed* playa = FindPlayerPed();
+    if (!playa)
+        return;
+
+    if (playa != ped)
+        return;
+
+    CPad* pad = CPad::GetPad(0);
+    CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
+    short& mode = cam.m_nCamMode;
+    float front = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
+
+    CWeapon& currentWeapon = playa->m_aWeapons[playa->m_nCurrentWeapon];
+    eWeaponType weaponType = currentWeapon.m_eWeaponType;
+    CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    if (pad->NewKeyState.lmenu && settings.altKeyWalk) {
+        playa->m_fMoveSpeed = 0.0f;
+    }
+
+    isAiming = false;
+    ignoreRotation = false;
+
+    if (!pad->DisablePlayerControls && IsAbleToAim(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && IsWeaponPossiblyCompatible(playa) && mode == 4) {
+        isAiming = true;
+        previousHorizontalAngle = cam.m_fHorizontalAngle;
+        previousVerticalAngle = cam.m_fVerticalAngle;
+
+        CEntity* p = playa->m_pPointGunAt;
+        float mouseX = pad->NewMouseControllerState.X;
+        float mouseY = pad->NewMouseControllerState.Y;
+        bool disableAutoAim = !pXboxPad->HasPadInHands() && !settings.forceAutoAim;
+
+        if (disableAutoAim) {
+            if (playa->m_bHasLockOnTarget && p)
+                ClearWeaponTarget(playa);
+        }
+        else {
+            if (playa->m_bHasLockOnTarget && p) {
+                CVector diff = p->GetPosition() - playa->GetPosition();
+                front = CGeneral::GetATanOfXY(diff.x, diff.y) - M_PI_2;
+
+                if (((pXboxPad->HasPadInHands() &&
+                    (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f)) ||
+                    diff.Magnitude() < 1.0f)
+                    ClearWeaponTarget(playa);
+            }
+            else {
+                if (/*!pad->SecondaryFireJustDown() && */(pad->Mode == 4 ? pad->NewState.LeftShoulder2 >= 100 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
+                    playa->FindWeaponLockOnTarget();
+            }
+        }
+
+        RotatePlayer(playa, front, false);
+#ifdef GTA3
+        playa->SetLookFlag(front, true);
+#else
+        playa->SetLookFlag(front, false, false);
+#endif
+        playa->SetAimFlag(front);
+
+        playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
+        playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, -DegToRad(45.0f), DegToRad(45.0f));
+
+        float torsoPitch = 0.0f;
+        if (!info->m_bCanAimWithArm || playa->m_nPedFlags.bIsDucking) {
+            torsoPitch = playa->m_fFPSMoveHeading;
+        }
+
+        if (playa->m_vecMoveSpeed.Magnitude() < 0.01f)
+            forceRealMoveAnim = true;
+
+        playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sHead, playa->m_PedIK.m_sHead.m_fYaw, 0.0f, playa->m_PedIK.ms_headInfo);
+        playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sTorso, 0.0f, torsoPitch, playa->m_PedIK.ms_torsoInfo);
+        playa->m_PedIK.MoveLimb(playa->m_PedIK.m_sLowerArm, 0.0f, playa->m_fFPSMoveHeading, playa->m_PedIK.ms_lowerArmInfo);
+
+#ifdef GTA3
+        CAnimBlendAssociation* anim = plugin::CallAndReturn<CAnimBlendAssociation*, 0x4055C0>(playa->m_pRwClump, info->m_AnimToPlay);
+#else
+        CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, info->m_AnimToPlay);
+#endif
+        bool point = true;
+
+        if (anim && anim->m_fCurrentTime < info->m_fAnimLoopEnd) {
+            point = false;
+        }
+
+        if (pad->GetWeapon())
+            point = false;
+
+        if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING)
+            point = false;
+
+        if (!currentWeapon.HasWeaponAmmoToBeUsed()) {
+            playa->ProcessWeaponSwitch(pad);
+            point = false;
+        }
+
+        if (point)
+            playa->SetPointGunAt(NULL);
+
+        wasPointing = true;
+
+#ifdef GTAVC
+        if (playa->m_nPedFlags.bIsDucking && !wasCrouching) {
+            playa->StartFightAttack(1);
+            wasCrouching = true;
+        }
+#endif
+    }
+
+    if (!isAiming) {
+        if (wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
+            playa->ClearPointGunAt();
+            playa->ClearWeaponTarget();
+
+#ifdef GTAVC
+            if (wasCrouching) {
+                CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
+                wasCrouching = false;
+            }
+#endif				
+            wasPointing = false;
+        }
+    }
+
+    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((!IsTypeMelee(playa) && IsTypeTwoHanded(playa))
+#ifndef GTA3
+        || (weaponType == WEAPONTYPE_CHAINSAW && playa->m_fTotSpeed > 0.05f)
+#endif
+        )) {
+        RotatePlayer(playa, front, true);
+    }
 }

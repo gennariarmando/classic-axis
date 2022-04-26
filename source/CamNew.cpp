@@ -86,10 +86,13 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     while (cam->m_fVerticalAngle >= M_PI) cam->m_fVerticalAngle -= 2.0f * M_PI;
     while (cam->m_fVerticalAngle < -M_PI) cam->m_fVerticalAngle += 2.0f * M_PI;
 
-    float lookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
-    float lookUpDown = CPad::GetPad(0)->LookAroundUpDown();
-    float mouseX = CPad::GetPad(0)->NewMouseControllerState.X;
-    float mouseY = CPad::GetPad(0)->NewMouseControllerState.Y;
+    CPad* pad = CPad::GetPad(0);
+    if (pad->DisablePlayerControls)
+        lockMovement = true;
+    float lookLeftRight = -pad->LookAroundLeftRight();
+    float lookUpDown = pad->LookAroundUpDown();
+    float mouseX = pad->NewMouseControllerState.X;
+    float mouseY = pad->NewMouseControllerState.Y;
     bool mouseInput = false;
 
     if (mouseX != 0.0f || mouseY != 0.0f) {
@@ -217,10 +220,13 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     while (cam->m_fVerticalAngle >= M_PI) cam->m_fVerticalAngle -= 2.0f * M_PI;
     while (cam->m_fVerticalAngle < -M_PI) cam->m_fVerticalAngle += 2.0f * M_PI;
 
-    float lookLeftRight = -CPad::GetPad(0)->LookAroundLeftRight();
-    float lookUpDown = CPad::GetPad(0)->LookAroundUpDown();
-    float mouseX = CPad::GetPad(0)->NewMouseControllerState.X;
-    float mouseY = CPad::GetPad(0)->NewMouseControllerState.Y;
+    CPad* pad = CPad::GetPad(0);
+    if (pad->DisablePlayerControls)
+        lockMovement = true;
+    float lookLeftRight = -pad->LookAroundLeftRight();
+    float lookUpDown = pad->LookAroundUpDown();
+    float mouseX = pad->NewMouseControllerState.X;
+    float mouseY = pad->NewMouseControllerState.Y;
     bool mouseInput = false;
 
     if (mouseX != 0.0f || mouseY != 0.0f) {
@@ -282,7 +288,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
     CColPoint colPoint = {};
     CEntity* entity = NULL;
 
-    CWorld::pIgnoreEntity = NULL;
+    CWorld::pIgnoreEntity = cam->m_pCamTargetEntity;
 
     if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, false, true, false, false, false
 #ifdef GTAVC 
@@ -298,6 +304,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
     float viewPlaneHeight = tan(DegToRad(cam->m_fFOV) * 0.5f);
     float viewPlaneWidth = viewPlaneHeight * GetAspectRatio() * 1.05f;
 
+    CWorld::pIgnoreEntity = NULL;
     for (int i = 0; i < 5; i++) {
         if (vecEntities[i]) {
             vecEntities[i]->m_nFlags.bIsVisible = true;
