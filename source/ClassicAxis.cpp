@@ -152,8 +152,6 @@ ClassicAxis::ClassicAxis() {
     auto camControl = [](int, int) {
         TheCamera.m_bUseMouse3rdPerson = true;
         FrontEndMenuManager.m_ControlMethod = 0;
-        //TheCamera.m_f3rdPersonCHairMultX = 0.5f;
-        //TheCamera.m_f3rdPersonCHairMultY = 0.5f;
 
         if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget)
             TheCamera.CamControl();
@@ -326,9 +324,9 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::SetChar(0x50554C + 1, 0);
     plugin::patch::SetChar(0x505627 + 1, 0);
 #else
-    auto ss = [](int _this, int, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11) {};
-    plugin::patch::RedirectCall(0x557713, (void(__fastcall*)(int _this, int, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11))ss);
-    plugin::patch::RedirectCall(0x5577F7, (void(__fastcall*)(int _this, int, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11))ss);
+    auto ss = [](int, int, int, int, int, int, int, int, int, int, int, int) {};
+    plugin::patch::RedirectCall(0x557713, (void(__fastcall*)(int, int, int, int, int, int, int, int, int, int, int, int))ss);
+    plugin::patch::RedirectCall(0x5577F7, (void(__fastcall*)(int, int, int, int, int, int, int, int, int, int, int, int))ss);
 #endif
     plugin::Events::drawHudEvent += [] {
         classicAxis.DrawCrosshair();
@@ -494,31 +492,10 @@ bool ClassicAxis::IsTypeMelee(CPed* ped) {
 #else
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
     return !info->m_bCanAim && !info->m_bCanAimWithArm;
-
-    //switch (weaponType) {
-    //case WEAPONTYPE_UNARMED:
-    //case WEAPONTYPE_BRASSKNUCKLE:
-    //case WEAPONTYPE_SCREWDRIVER:
-    //case WEAPONTYPE_GOLFCLUB:
-    //case WEAPONTYPE_NIGHTSTICK:
-    //case WEAPONTYPE_KNIFE:
-    //case WEAPONTYPE_BASEBALLBAT:
-    //case WEAPONTYPE_HAMMER:
-    //case WEAPONTYPE_CLEAVER:
-    //case WEAPONTYPE_MACHETE:
-    //case WEAPONTYPE_KATANA:
-    ////case WEAPONTYPE_CHAINSAW:
-    //case WEAPONTYPE_GRENADE:
-    //case WEAPONTYPE_DETONATOR_GRENADE:
-    //case WEAPONTYPE_TEARGAS:
-    //case WEAPONTYPE_MOLOTOV:
-    //case WEAPONTYPE_CAMERA:
-    //	return true;
-    //}
 #endif
 
     return false;
-    }
+}
 
 bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;

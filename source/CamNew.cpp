@@ -14,6 +14,11 @@
 
 using namespace plugin;
 
+#ifdef GTA3
+CColPoint* gaTempSphereColPoints = (CColPoint*)0x6E64C0;
+#else
+CColPoint* gaTempSphereColPoints = (CColPoint*)0x7D18C0;
+#endif
 std::shared_ptr<CCamNew> CamNew;
 
 CCamNew::CCamNew() {
@@ -21,6 +26,11 @@ CCamNew::CCamNew() {
     targetCoords = {};
     lengthBeforeAiming = 0.0f;
     cameraInput = false;
+    vecEntities.resize(5);
+    previousPedZoomIndicator = 0.0f;
+    previousPedZoomValue = 0.0f;
+    previoudPedZoomValueSmooth = 0.0f;
+    previousPedZoomValueScript = 0.0f;
 }
 
 CCamNew::~CCamNew() {
@@ -145,57 +155,14 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
 
-    CEntity* entity = NULL;
-    CColPoint colPoint;
-    CWorld::pIgnoreEntity = e;
+    previousPedZoomIndicator = TheCamera.PedZoomIndicator;
+    previousPedZoomValue = TheCamera.m_fPedZoomValue;
+    previoudPedZoomValueSmooth = TheCamera.m_fPedZoomValueSmooth;
+    previousPedZoomValueScript = TheCamera.m_fPedZoomValueScript;
 
-    if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, false, true, false, true, true
-#ifndef GTA3
-        , false
-#endif
-    )) {
-        cam->m_vecSource = colPoint.m_vecPoint;
-
-        CVector d = cam->m_vecSource - targetCoords;
-        float l = d.Magnitude();
-        if (l > 0.4f) {
-            d.x = d.x / l * (l - 0.3f);
-            d.y = d.y / l * (l - 0.3f);
-            d.z = d.z / l * (l - 0.3f);
-
-        }
-        cam->m_vecSource = targetCoords + d;
-
-        if (Magnitude2d(targetCoords - cam->m_vecSource) < 2.0f)
-            RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
-    }
-
-    CWorld::pIgnoreEntity = e;
-    if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, true, true, false, true, true
-#ifndef GTA3
-        , false
-#endif
-    )) {
-        cam->m_vecSource = colPoint.m_vecPoint;
-
-        CVector d = cam->m_vecSource - targetCoords;
-        float l = d.Magnitude();
-        if (l > 0.3f) {
-            d.x = d.x / l * (l - 0.3f);
-            d.y = d.y / l * (l - 0.3f);
-            d.z = d.z / l * (l - 0.3f);
-
-        }
-        cam->m_vecSource = targetCoords + d;
-
-        if (Magnitude2d(targetCoords - cam->m_vecSource) < 2.0f)
-            RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
-    }
-    CWorld::pIgnoreEntity = NULL;
-
+    Process_AvoidCollisions(length);
     GetVectorsReadyForRW();
 }
-
 
 void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float, float) {
     if (!cam)
@@ -208,15 +175,9 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     cam->m_fFOV = 70.0f;
 
-    const float minDist = 2.0f;
-#ifdef GTA3
-    const float maxDist = minDist + TheCamera.m_fPedZoomValueSmooth;
-#else
-    const float maxDist = minDist + TheCamera.m_fPedZoomValueScript;
-#endif
+    const float length = 2.0f;
     const float heightOffset = 0.5f;
 
-    RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
     CVector aimOffset = CVector(0.5f, 0.0f, 0.5f);
 
 #ifdef GTA3
@@ -240,8 +201,6 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     targetCoords.z += heightOffset;
 
     CVector dist = cam->m_vecSource - targetCoords;
-
-    float length = minDist;
     bool lockMovement = false;
     CEntity* p = e->m_pPointGunAt;
     if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
@@ -309,53 +268,66 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
 
-    CWorld::pIgnoreEntity = e;
+    TheCamera.PedZoomIndicator = previousPedZoomIndicator;
+    TheCamera.m_fPedZoomValue = previousPedZoomValue;
+    TheCamera.m_fPedZoomValueSmooth = previoudPedZoomValueSmooth;
+    TheCamera.m_fPedZoomValueScript = previousPedZoomValueScript;
 
-    if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, false, true, false, true, true
-#ifndef GTA3
-        , false
-#endif
-    )) {
-        cam->m_vecSource = colPoint.m_vecPoint;
-
-        CVector d = cam->m_vecSource - targetCoords;
-        float l = d.Magnitude();
-        if (l > 0.4f) {
-            d.x = d.x / l * (l - 0.3f);
-            d.y = d.y / l * (l - 0.3f);
-            d.z = d.z / l * (l - 0.3f);
-
-        }
-        cam->m_vecSource = targetCoords + d;
-
-        if (Magnitude2d(targetCoords - cam->m_vecSource) < 2.0f)
-            RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
-    }
-
-    CWorld::pIgnoreEntity = e;
-    if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, true, true, false, true, true
-#ifndef GTA3
-        , false
-#endif
-    )) {
-        cam->m_vecSource = colPoint.m_vecPoint;
-
-        CVector d = cam->m_vecSource - targetCoords;
-        float l = d.Magnitude();
-        if (l > 0.3f) {
-            d.x = d.x / l * (l - 0.3f);
-            d.y = d.y / l * (l - 0.3f);
-            d.z = d.z / l * (l - 0.3f);
-
-        }
-        cam->m_vecSource = targetCoords + d;
-
-        if (Magnitude2d(targetCoords - cam->m_vecSource) < 2.0f)
-            RwCameraSetNearClipPlane(Scene.m_pCamera, 0.05f);
-    }
-    CWorld::pIgnoreEntity = NULL;
+    Process_AvoidCollisions(length);
 
     GetVectorsReadyForRW();
+}
+
+void CCamNew::Process_AvoidCollisions(float length) {
+    CColPoint colPoint = {};
+    CEntity* entity = NULL;
+
+    CWorld::pIgnoreEntity = NULL;
+
+    if (CWorld::ProcessLineOfSight(targetCoords, cam->m_vecSource, colPoint, entity, true, true, false, true, false, false, false
+#ifdef GTAVC 
+        , false
+#endif
+    )) {
+        float distFromPoint = (targetCoords - colPoint.m_vecPoint).Magnitude();
+        cam->m_vecSource = colPoint.m_vecPoint;
+        if (distFromPoint < 1.3f)
+            RwCameraSetNearClipPlane(Scene.m_pCamera, max(distFromPoint - 0.3f, 0.05f));
+    }
+
+    float viewPlaneHeight = tan(DegToRad(cam->m_fFOV) * 0.5f);
+    float viewPlaneWidth = viewPlaneHeight * GetAspectRatio() * 1.05f;
+
+    for (int i = 0; i < 5; i++) {
+        if (vecEntities[i]) {
+            vecEntities[i]->m_nFlags.bIsVisible = true;
+            vecEntities[i] = NULL;
+        }
+
+        float nearClip = RwCameraGetNearClipPlane(Scene.m_pCamera);
+        float radius = (viewPlaneWidth * nearClip);
+        CVector center = cam->m_vecSource + cam->m_vecFront * nearClip;
+        if (entity = CWorld::TestSphereAgainstWorld(center, radius, NULL, true, true, true, true, false, true)) {
+            bool isTypePed = entity->m_nType == ENTITY_TYPE_PED;
+
+            if (isTypePed && entity->IsVisible() && Magnitude2d((center - entity->GetPosition())) < 0.5f) {
+                vecEntities[i] = entity;
+                entity->m_nFlags.bIsVisible = false;
+            }
+            else if (!isTypePed) {
+                CVector distFromPoint = gaTempSphereColPoints[0].m_vecPoint - cam->m_vecSource;
+                float frontDist = DotProduct(distFromPoint, cam->m_vecFront);
+                float dist = (distFromPoint - cam->m_vecFront * frontDist).Magnitude() / viewPlaneWidth;
+
+                dist = max(min(nearClip, dist), 0.1f);
+                if (dist < nearClip)
+                    RwCameraSetNearClipPlane(Scene.m_pCamera, dist);
+
+                if (dist == 0.1f)
+                    cam->m_vecSource += (targetCoords - cam->m_vecSource) * 0.3f;
+            }
+        }
+    }
 }
 
 void CCamNew::GetVectorsReadyForRW() {
