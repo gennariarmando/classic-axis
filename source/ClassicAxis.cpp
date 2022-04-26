@@ -307,6 +307,18 @@ ClassicAxis::ClassicAxis() {
         classicAxis.RotatePlayer(playa, angle, false);
         cam->m_fVerticalAngle = M_PI;
     };
+    
+#ifdef GTA3
+    plugin::ThiscallEvent <plugin::AddressList<0x4F21B7, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPlayerPed*, 0>, void(CPlayerPed*)> onFindingLockOnTarget;
+#else
+    plugin::ThiscallEvent <plugin::AddressList<0x534D64, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPlayerPed*, 0>, void(CPlayerPed*)> onFindingLockOnTarget;
+#endif
+    onFindingLockOnTarget += [](CPlayerPed* ped) {
+        bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
+
+        if (disableAutoAim)
+            ped->ClearWeaponTarget();
+    };
 }
 
 void ClassicAxis::RotatePlayer(CPed* ped, float angle, bool smooth) {
@@ -533,11 +545,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
         float mouseY = pad->NewMouseControllerState.Y;
         bool disableAutoAim = !pXboxPad->HasPadInHands() && !settings.forceAutoAim;
 
-        if (disableAutoAim) {
-            if (playa->m_bHasLockOnTarget && p)
-                ClearWeaponTarget(playa);
-        }
-        else {
+        if (!disableAutoAim) {
             if (playa->m_bHasLockOnTarget && p) {
                 CVector diff = p->GetPosition() - playa->GetPosition();
                 front = CGeneral::GetATanOfXY(diff.x, diff.y) - M_PI_2;
