@@ -424,6 +424,16 @@ bool ClassicAxis::IsTypeMelee(CPed* ped) {
 bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    switch (weaponType) {
+    case WEAPONTYPE_FLAMETHROWER:
+#ifndef GTA3
+    case WEAPONTYPE_MINIGUN:
+#endif
+        info->m_bCanAim = true;
+        break;
+    }
+
     return (info->m_bCanAim || info->m_bHeavy) && !info->m_bCanAimWithArm && !info->m_b1stPerson;
 }
 
@@ -453,7 +463,7 @@ void ClassicAxis::DrawCrosshair() {
             if (classicAxis.isAiming) {
                 if (!playa->m_bInVehicle && Mode == 4 && !pad->DisablePlayerControls) {
                     if (!playa->m_bHasLockOnTarget && classicAxis.IsWeaponPossiblyCompatible(playa))
-                        crosshair->Draw(CRect(x - ScaleX(16.0f), y - ScaleY(16.0f), x + ScaleX(16.0f), y + ScaleY(16.0f)), CRGBA(255, 255, 255, 255));
+                        crosshair->Draw(CRect(x - ScaleX(14.0f), y - ScaleY(14.0f), x + ScaleX(14.0f), y + ScaleY(14.0f)), CRGBA(255, 255, 255, 255));
                 }
 
             }
@@ -686,7 +696,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
         }
     }
 
-    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((!IsTypeMelee(playa) && IsTypeTwoHanded(playa))
+    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa))
 #ifndef GTA3
         || (weaponType == WEAPONTYPE_CHAINSAW && playa->m_fTotSpeed > 0.05f)
 #endif
