@@ -648,7 +648,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 #ifdef GTA3
         CAnimBlendAssociation* anim = plugin::CallAndReturn<CAnimBlendAssociation*, 0x4055C0>(playa->m_pRwClump, info->m_AnimToPlay);
 #else
-        CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, info->m_AnimToPlay);
+        CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, 205);
 #endif
         bool point = true;
 
