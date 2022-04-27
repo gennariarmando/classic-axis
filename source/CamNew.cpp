@@ -7,6 +7,7 @@
 #include "CScene.h"
 #include "CDraw.h"
 #include "CFont.h"
+#include "CWeaponInfo.h"
 
 #include "ClassicAxis.h"
 #include "CamNew.h"
@@ -24,13 +25,13 @@ std::shared_ptr<CCamNew> CamNew;
 CCamNew::CCamNew() {
     cam = &TheCamera.m_asCams[TheCamera.m_nActiveCam];
     targetCoords = {};
-    lengthBeforeAiming = 0.0f;
     cameraInput = false;
     vecEntities.resize(5);
     previousPedZoomIndicator = 0.0f;
     previousPedZoomValue = 0.0f;
     previoudPedZoomValueSmooth = 0.0f;
     previousPedZoomValueScript = 0.0f;
+    length = 0.0f;
 }
 
 CCamNew::~CCamNew() {
@@ -73,7 +74,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
         cam->m_bResetStatics = false;
     }
 
-    float length = maxDist;
+    if (!classicAxis.settings.lcsAimingCoords)
+        length = interpF(length, maxDist, 0.2f * CTimer::ms_fTimeStep);
+    else
+        length = maxDist;
+
     bool lockMovement = false;
     CEntity* p = e->m_pPointGunAt;
     if (usingController && !cam->m_bLookingBehind && !cameraInput) {
@@ -178,10 +183,26 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     cam->m_fFOV = 70.0f;
 
-    const float length = 2.0f;
-    const float heightOffset = 0.5f;
+    float startLength = 2.7f;
+    float heightOffset = 0.25f;
 
-    CVector aimOffset = CVector(0.5f, 0.0f, 0.5f);
+    CVector aimOffset = CVector(0.52f, 0.0f, 0.55f);
+
+    if (classicAxis.settings.lcsAimingCoords) {
+        length = startLength;
+    }
+    else {
+        aimOffset = CVector(0.25f, 0.0f, 0.5f);
+
+        const eWeaponType weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
+        CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+        if (!info->m_bCanAimWithArm && info->m_bCanAim) {
+            startLength -= 0.7f;
+            aimOffset.z += 0.05f;
+        }
+        length = interpF(length, startLength, 0.2f * CTimer::ms_fTimeStep);
+    }
 
 #ifdef GTA3
     CMatrix& mat = e->m_matrix;
@@ -209,9 +230,12 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
         CVector target = p->GetPosition();
         CVector targetDiff = (cam->m_vecSource - target);
+        float f = tan(cam->m_fFOV * 0.5f * 0.017453292);
+        float b = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5 + TheCamera.m_f3rdPersonCHairMultX - 0.5) * f);
+        cam->m_fHorizontalAngle = e->m_fRotationCur + (M_PI * 0.5f) + b;
 
-        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(targetDiff.x, targetDiff.y) + M_PI;
-        cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(targetDiff), -targetDiff.z) + M_1_PI / 2;
+        float a = CGeneral::GetATanOfXY(1.0f, f * ((0.5 - TheCamera.m_f3rdPersonCHairMultY + 0.5 - TheCamera.m_f3rdPersonCHairMultY) * (1.0 / GetAspectRatio())));
+        cam->m_fVerticalAngle = a - (M_PI * 0.05f);
         lockMovement = true;
     }
 

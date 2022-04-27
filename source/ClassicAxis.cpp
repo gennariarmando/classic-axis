@@ -30,8 +30,9 @@ ClassicAxis::ClassicAxis() {
         classicAxis.wasCrouching = false;
         classicAxis.ignoreRotation = false;
         classicAxis.forceRealMoveAnim = false;
-        classicAxis.previousHorizontalAngle = 0.0f;
-        classicAxis.previousVerticalAngle = 0.0f;
+        classicAxis.lastLockOnPos = {};
+        classicAxis.timeLockOn = 0;
+        classicAxis.lastLockOnColor = { 255, 255, 255, 255 };
 
         CamNew = std::make_shared<CCamNew>();
     };
@@ -154,7 +155,11 @@ ClassicAxis::ClassicAxis() {
     auto camControl = [](int, int) {
         TheCamera.m_bUseMouse3rdPerson = true;
         FrontEndMenuManager.m_ControlMethod = 0;
-
+        TheCamera.m_f3rdPersonCHairMultX = classicAxis.settings.cameraCrosshairMultX;
+        TheCamera.m_f3rdPersonCHairMultY = classicAxis.settings.cameraCrosshairMultY;
+#ifdef GTAVC
+        plugin::patch::SetPointer(0x46F925 + 2, &classicAxis.settings.cameraCrosshairMultX);
+#endif
         if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget)
             TheCamera.CamControl();
     };
@@ -190,7 +195,7 @@ ClassicAxis::ClassicAxis() {
             classicAxis.DrawAutoAimTarget();
     };
 
-    if (classicAxis.settings.lcsTargetSystem) {
+    if (classicAxis.settings.lockOnTargetType > TARGET_DEFAULT) {
 #ifdef GTA3
         plugin::patch::SetUChar(0x564D04 + 6, 0);
 #else
@@ -305,7 +310,6 @@ ClassicAxis::ClassicAxis() {
         CPlayerPed* playa = FindPlayerPed();
         float angle = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
         classicAxis.RotatePlayer(playa, angle, false);
-        cam->m_fVerticalAngle = M_PI;
     };
     
 #ifdef GTA3
@@ -458,7 +462,7 @@ void ClassicAxis::DrawCrosshair() {
 }
 
 void ClassicAxis::DrawAutoAimTarget() {
-    if (!settings.lcsTargetSystem)
+    if (settings.lockOnTargetType == TARGET_DEFAULT)
         return;
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
@@ -468,38 +472,71 @@ void ClassicAxis::DrawAutoAimTarget() {
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(FALSE));
 
-    CPed* playa = FindPlayerPed();
+    CPlayerPed* playa = FindPlayerPed();
 
     if (playa) {
         CEntity* e = playa->m_pPointGunAt;
-        if (e) {
-            CRGBA col = { 0, 255, 0, 255 };
-            CPed* ep = NULL;
-            RwV3d in;
+        CRGBA col = { 0, 255, 0, 255 };
+        int targetMode = 0;
 
-            in.x = e->GetPosition().x;
-            in.y = e->GetPosition().y;
-            in.z = e->GetPosition().z;
+        if (e) {
+            lastLockOnPos.x = e->GetPosition().x;
+            lastLockOnPos.y = e->GetPosition().y;
+            lastLockOnPos.z = e->GetPosition().z;
 
             if (e->m_nType = ENTITY_TYPE_PED) {
                 CPed* ep = static_cast<CPed*>(e);
 
                 if (ep) {
-                    ep->m_PedIK.GetComponentPosition(in, 1);
-                    in.z += 0.25f;
+                    ep->m_PedIK.GetComponentPosition(lastLockOnPos, 1);
+                    lastLockOnPos.z += 0.25f;
 
                     float health = ep->m_fHealth / 100.0f;
-                    col = CRGBA((1.0f - health) * 255, health * 255, 0, 245);
+
+                    if (settings.lockOnTargetType == TARGET_SA)
+                        col = CRGBA((1.0f - health) * 255, health * 255, 0, 255);
+                    else
+                        col = CRGBA(0, health * 255, 0, 255);
+
                     if (health <= 0.0f)
                         col = CRGBA(0, 0, 0, 255);
                 }
             }
 
-            RwV3d out;
-            float w, h;
-            if (CSprite::CalcScreenCoors(in, &out, &w, &h, false)) {
-                DrawTarget(out.x, out.y, w / 128.0f, col);
+            if (playa->m_bHasLockOnTarget && e) {
+                targetMode = 1;
+                timeLockOn = 250 + CTimer::m_snTimeInMilliseconds;
+                lastLockOnColor = col;
             }
+        }
+
+        RwV3d in = lastLockOnPos;
+        RwV3d out;
+        float w, h;
+        float rotMult = 0.5f;
+        float dist = 1.0f;
+
+        if (timeLockOn > CTimer::m_snTimeInMilliseconds) {
+            if (CSprite::CalcScreenCoors(in, &out, &w, &h, false)) {
+                switch (settings.lockOnTargetType) {
+                case TARGET_SA:
+                    dist = (w / 128.0f) * static_cast<float>((timeLockOn / (250 + CTimer::m_snTimeInMilliseconds)));
+                    if (targetMode == 0) {
+                        rotMult = 3.0f;
+                    }
+                    DrawSATarget(out.x, out.y, dist, rotMult, lastLockOnColor);
+                    break;
+                case TARGET_LCS:
+                    dist = w / 128.0f;
+                    col.a = 150;
+                    if (targetMode == 1)
+                        DrawLCSTarget(out.x, out.y, dist, col);
+                    break;
+                }
+            }
+        }
+        else {
+            lastLockOnColor = col;
         }
     }
 }
@@ -523,7 +560,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
     CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
     short& mode = cam.m_nCamMode;
     float front = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
-
+    float height = Find3rdPersonQuickAimPitch(TheCamera.m_f3rdPersonCHairMultY);
     CWeapon& currentWeapon = playa->m_aWeapons[playa->m_nCurrentWeapon];
     eWeaponType weaponType = currentWeapon.m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
@@ -537,8 +574,6 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 
     if (!pad->DisablePlayerControls && IsAbleToAim(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && IsWeaponPossiblyCompatible(playa) && mode == 4) {
         isAiming = true;
-        previousHorizontalAngle = cam.m_fHorizontalAngle;
-        previousVerticalAngle = cam.m_fVerticalAngle;
 
         CEntity* p = playa->m_pPointGunAt;
         float mouseX = pad->NewMouseControllerState.X;
@@ -550,9 +585,25 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                 CVector diff = p->GetPosition() - playa->GetPosition();
                 front = CGeneral::GetATanOfXY(diff.x, diff.y) - M_PI_2;
 
+                RwV3d out;
+                RwV3d in;
+                in.x = p->GetPosition().x;
+                in.y = p->GetPosition().y;
+                in.z = p->GetPosition().z;
+
+                if (p->m_nType = ENTITY_TYPE_PED) {
+                    CPed* ep = static_cast<CPed*>(p);
+                    ep->m_PedIK.GetComponentPosition(in, 1);
+                    in.z += 0.25f;
+                }
+
+                if (CSprite::CalcScreenCoors(in, &out, &in.x, &in.y, false)) {
+                    height = Find3rdPersonQuickAimPitch(out.y / SCREEN_HEIGHT);
+                }
+
                 if (((pXboxPad->HasPadInHands() &&
                     (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f)) ||
-                    diff.Magnitude() < 1.0f)
+                    diff.Magnitude() < 0.5f)
                     ClearWeaponTarget(playa);
             }
             else {
@@ -569,7 +620,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 #endif
         playa->SetAimFlag(front);
 
-        playa->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
+        playa->m_fFPSMoveHeading = height;
         playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, -DegToRad(45.0f), DegToRad(45.0f));
 
         float torsoPitch = 0.0f;
@@ -626,7 +677,8 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 
 #ifdef GTAVC
             if (wasCrouching) {
-                CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
+                if (IsAbleToAim(playa))
+                    CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
                 wasCrouching = false;
             }
 #endif				
@@ -641,4 +693,11 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
         )) {
         RotatePlayer(playa, front, true);
     }
+}
+
+float ClassicAxis::Find3rdPersonQuickAimPitch(float y) {
+    CCam* cam = &TheCamera.m_asCams[TheCamera.m_nActiveCam];
+    CVector front = cam->m_vecFront;
+    float fov = cam->m_fFOV;
+    return -(DegToRad(((0.5f - y) * 1.8f * 0.5f * fov)) + asinf(front.z));
 }

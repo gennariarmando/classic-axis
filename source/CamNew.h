@@ -10,13 +10,13 @@ class CCamNew {
 public:
     CCam* cam;
     CVector targetCoords;
-    float lengthBeforeAiming;
     bool cameraInput;
     std::vector<CEntity*> vecEntities;
     float previousPedZoomIndicator;
     float previousPedZoomValue;
     float previoudPedZoomValueSmooth;
     float previousPedZoomValueScript;
+    float length;
 
 public:
     CCamNew();

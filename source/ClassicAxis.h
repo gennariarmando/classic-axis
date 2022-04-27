@@ -13,8 +13,9 @@ public:
     bool ignoreRotation;
     bool forceRealMoveAnim;
     Settings settings;
-    float previousVerticalAngle;
-    float previousHorizontalAngle;
+    RwV3d lastLockOnPos;
+    int timeLockOn;
+    CRGBA lastLockOnColor;
 
 public:
     ClassicAxis();
@@ -28,6 +29,7 @@ public:
     void DrawAutoAimTarget();
     void ClearWeaponTarget(CPlayerPed* ped);
     void ProcessPlayerPedControl(CPed* ped);
+    float Find3rdPersonQuickAimPitch(float y);
 };
 
 extern ClassicAxis classicAxis;

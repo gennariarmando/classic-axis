@@ -103,33 +103,47 @@ static void RotateVertices(CVector2D* rect, float x, float y, float angle) {
         rect[i].y = y - (xold - x) * _sin + (yold - y) * _cos;
     }
 }
-static void DrawTriangle(float x, float y, float scale, float angle, CRGBA const& col) {
-    CVector2D posn[4];
-    float w = scale * 0.6f;
-    float h = scale;
 
+static void DrawTriangle(float x, float y, float w, float h, CVector2D center, float angle, CRGBA const& col) {
+    CVector2D posn[4];
     posn[1].x = x - (w * 0.5f); posn[1].y = y - (h * 0.5f); posn[0].x = x + (w * 0.5f); posn[0].y = y - (h * 0.5f);
     posn[3].x = x; posn[3].y = y + (h * 0.5f);	posn[2].x = x; posn[2].y = y + (h * 0.5f);
 
-    RotateVertices(posn, x, y, angle);
+    RotateVertices(posn, x + (w * center.x), y + (h * center.y), angle);
     Draw2DPolygon(posn[0].x, posn[0].y, posn[1].x, posn[1].y, posn[2].x, posn[2].y, posn[3].x, posn[3].y, CRGBA(col));
 }
 
-static void DrawTarget(float x, float y, float dist, CRGBA const& col) {
-    dist = clamp(dist, 0.3f, 1.0f);
-    float offset = 20.0f * dist;
+static void DrawLCSTarget(float x, float y, float dist, CRGBA const& col) {
+    dist = clamp(dist, 0.1f, 1.0f);
+    float offset = 32.0f * dist;
 
     x += ScaleY(-offset);
-    DrawTriangle(x, y, ScaleY(9.0f), DegToRad(50.0f), CRGBA(0, 0, 0, col.a));
-    DrawTriangle(x, y, ScaleY(8.0f), DegToRad(50.0f), col);
+    DrawTriangle(x, y, ScaleY(9.0f * 0.6f), ScaleY(9.0f), CVector2D(0.0f, 0.0f), DegToRad(55.0f), CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, ScaleY(8.0f * 0.6f), ScaleY(8.0f), CVector2D(0.0f, 0.0f), DegToRad(55.0f), col);
     x += ScaleY(offset);
 
     x += ScaleY(offset);
-    DrawTriangle(x, y, ScaleY(9.0f), DegToRad(-50.0f), CRGBA(0, 0, 0, col.a));
-    DrawTriangle(x, y, ScaleY(8.0f), DegToRad(-50.0f), col);
+    DrawTriangle(x, y, ScaleY(9.0f * 0.6f), ScaleY(9.0f), CVector2D(0.0f, 0.0f),DegToRad(-55.0f), CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, ScaleY(8.0f * 0.6f), ScaleY(8.0f), CVector2D(0.0f, 0.0f),DegToRad(-55.0f), col);
     x += ScaleY(-offset);
 
     y += ScaleY(offset * 1.5f);
-    DrawTriangle(x, y, ScaleY(9.0f), DegToRad(180.0f), CRGBA(0, 0, 0, col.a));
-    DrawTriangle(x, y, ScaleY(8.0f), DegToRad(180.0f), col);
+    DrawTriangle(x, y, ScaleY(9.0f * 0.6f), ScaleY(9.0f), CVector2D(0.0f, 0.0f),DegToRad(180.0f), CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, ScaleY(8.0f * 0.6f), ScaleY(8.0f), CVector2D(0.0f, 0.0f),DegToRad(180.0f), col);
+}
+
+static void DrawSATarget(float x, float y, float dist, float rotationMult, CRGBA const& col) {
+    dist = clamp(dist, 0.6f, 1.0f);
+
+    static float angle = 0.0f;
+    angle += ((0.2f * rotationMult) * CTimer::ms_fTimeStep);
+
+    float b = ScaleY(10.0f * dist);
+    float s = ScaleY(9.8f * dist);
+    DrawTriangle(x, y, b * 0.8f, b, CVector2D(0.0f, dist + 1.0f), DegToRad(60.0f) - angle, CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, s * 0.8f, s, CVector2D(0.0f, dist + 1.0f), DegToRad(60.0f) - angle, col);
+    DrawTriangle(x, y, b * 0.8f, b, CVector2D(0.0f, dist + 1.0f), DegToRad(-60.0f) - angle, CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, s * 0.8f, s, CVector2D(0.0f, dist + 1.0f), DegToRad(-60.0f) - angle, col);
+    DrawTriangle(x, y, b * 0.8f, b, CVector2D(0.0f, dist + 1.0f), DegToRad(180.0f) - angle, CRGBA(0, 0, 0, col.a));
+    DrawTriangle(x, y, s * 0.8f, s, CVector2D(0.0f, dist + 1.0f), DegToRad(180.0f) - angle, col);
 }
