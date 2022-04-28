@@ -1,7 +1,8 @@
-# Classic Axis:
+# [Classic Axis](https://gtaforums.com/topic/896122-classic-axis-for-gta-iii-and-gta-vc/)
 Classic Axis is a modification for "GTA: III and Vice City" that aims to bring a better visual camera behavior to the game and to improve gameplay experience.
 
 ## Showcase:
+[<img src="https://i.imgur.com/WUx5yuC.png" width="100%">](https://youtu.be/QXZ4r7oHP60 "GTA: VC - Classic Axis Montage Gameplay")
 
 ## Compiling:
 Requirements:
@@ -36,7 +37,7 @@ or
 - ClassicAxisVC.asi
 - ClassicAxisVC.ini
 
-Copy the content of the archive into your GTA directory.\
+Copy the content of the archive into your GTA directory.
 
 ## Links:
 - [plugin-sdk](https://github.com/DK22Pac/plugin-sdk)
