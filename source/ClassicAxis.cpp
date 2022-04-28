@@ -218,21 +218,17 @@ ClassicAxis::ClassicAxis() {
         if (!e)
             return;
 
-        if (cam->m_bCamLookingAtVector)
-            target = cam->m_vecCamFixedModeVector;
-        else {
-            target = e->GetPosition();
+        target = e->GetPosition();
 
 #ifdef GTA3
-            CMatrix& mat = e->m_matrix;
+        CMatrix& mat = e->m_matrix;
 #else
-            CMatrix& mat = e->m_placement;
+        CMatrix& mat = e->m_placement;
 #endif
-            if (mat.up.x == 0.0f && mat.up.y == 0.0f)
-                targetOrient = 0.0f;
-            else
-                targetOrient = CGeneral::GetATanOfXY(mat.up.x, mat.up.y);
-        }
+        if (mat.up.x == 0.0f && mat.up.y == 0.0f)
+            targetOrient = 0.0f;
+        else
+            targetOrient = CGeneral::GetATanOfXY(mat.up.x, mat.up.y);
 
         char mode = cam->m_nCamMode;
         switch (mode) {
@@ -401,9 +397,11 @@ ClassicAxis::ClassicAxis() {
 #endif
 
     onSet1stPersonPlayerCamMode += [](CCam* cam, int, int, int) {
-        CPlayerPed* playa = FindPlayerPed();
-        float angle = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
-        classicAxis.RotatePlayer(playa, angle, false);
+        if (TheCamera.m_asCams[TheCamera.m_nActiveCam].m_nCamMode == 4) {
+            CPlayerPed* playa = FindPlayerPed();
+            float angle = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
+            classicAxis.RotatePlayer(playa, angle, false);
+        }
     };
     
 #ifdef GTA3
@@ -536,11 +534,7 @@ void ClassicAxis::DrawCrosshair() {
     CPlayerPed* playa = FindPlayerPed();
     CPad* pad = CPad::GetPad(0);
 
-#ifdef GTA3
-    if (TheCamera.m_nTransitionState != 0)
-#else
-    if (TheCamera.m_uiTransitionState != 0)
-#endif
+    if (cam.m_nCamMode != MODE_AIMWEAPON)
         return;
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
