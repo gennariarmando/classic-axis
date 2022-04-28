@@ -10,6 +10,7 @@ void Settings::Read() {
 
     forceAutoAim = config["ForceAutoAim"].asBool(false);
     lockOnTargetType = config["LockOnTargetType"].asInt(TARGET_SA);
+    showTriangleForMouseRecruit = config["ShowTriangleForMouseRecruit"].asBool(true);
     altKeyWalk = config["EnableLAltKeyWalk"].asBool(true);
     lcsAimingCoords = config["LCSAimingCoords"].asBool(false);
     cameraCrosshairMultX = config["CameraCrosshairMultX"].asFloat(0.53f);

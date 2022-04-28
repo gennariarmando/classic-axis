@@ -31,7 +31,6 @@ CCamNew::CCamNew() {
     previousPedZoomValue = 0.0f;
     previoudPedZoomValueSmooth = 0.0f;
     previousPedZoomValueScript = 0.0f;
-    length = 0.0f;
 }
 
 CCamNew::~CCamNew() {
@@ -74,18 +73,26 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
         cam->m_bResetStatics = false;
     }
 
-    if (!classicAxis.settings.lcsAimingCoords)
-        length = interpF(length, maxDist, 0.2f * CTimer::ms_fTimeStep);
-    else
-        length = maxDist;
+    float length = dist.Magnitude();
+    if (length == 0.0f)
+        dist = CVector(1.0f, 1.0f, 0.0f);
+    else if (length < minDist)
+        dist *= minDist / length;
+    else if (length > maxDist)
+        dist *= maxDist / length;
+    length = dist.Magnitude();
 
     bool lockMovement = false;
-    CEntity* p = e->m_pPointGunAt;
-    if (usingController && !cam->m_bLookingBehind && !cameraInput) {
+#ifdef GTA3
+    if (TheCamera.m_nTransitionState != 0)
+#else
+    if (TheCamera.m_uiTransitionState != 0)
+#endif
+        lockMovement = true;
+    if (usingController && !lockMovement) {
         cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
         cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
     }
-
     while (cam->m_fHorizontalAngle >= M_PI) cam->m_fHorizontalAngle -= 2.0f * M_PI;
     while (cam->m_fHorizontalAngle < -M_PI) cam->m_fHorizontalAngle += 2.0f * M_PI;
     while (cam->m_fVerticalAngle >= M_PI) cam->m_fVerticalAngle -= 2.0f * M_PI;
@@ -183,25 +190,22 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     cam->m_fFOV = 70.0f;
 
-    float startLength = 2.7f;
-    float heightOffset = 0.25f;
+    const float maxDist = 2.7f;
+    const float heightOffset = 0.25f;
 
     CVector aimOffset = CVector(0.52f, 0.0f, 0.55f);
 
-    if (classicAxis.settings.lcsAimingCoords) {
-        length = startLength;
-    }
-    else {
+    float length = maxDist;
+    if (!classicAxis.settings.lcsAimingCoords) {
         aimOffset = CVector(0.25f, 0.0f, 0.5f);
 
         const eWeaponType weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
         CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
         if (!info->m_bCanAimWithArm && info->m_bCanAim) {
-            startLength -= 0.7f;
+            length -= 0.7f;
             aimOffset.z += 0.05f;
         }
-        length = interpF(length, startLength, 0.2f * CTimer::ms_fTimeStep);
     }
 
 #ifdef GTA3
@@ -225,9 +229,27 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     targetCoords.z += heightOffset;
 
     CVector dist = cam->m_vecSource - targetCoords;
+
+    if (cam->m_bResetStatics) {
+        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
+        cam->m_fVerticalAngle = 0.0f;
+
+        dist = maxDist * CVector(cosf(cam->m_fVerticalAngle) * cosf(cam->m_fHorizontalAngle), cosf(cam->m_fVerticalAngle) * sinf(cam->m_fHorizontalAngle), sinf(cam->m_fVerticalAngle));
+        cam->m_vecSource = targetCoords + dist;
+
+        cam->m_bResetStatics = false;
+    }
+
     bool lockMovement = false;
+#ifdef GTA3
+    if (TheCamera.m_nTransitionState != 0)
+#else
+    if (TheCamera.m_uiTransitionState != 0)
+#endif
+        lockMovement = true;
+
     CEntity* p = e->m_pPointGunAt;
-    if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
+    if (e->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
         CVector target = p->GetPosition();
         CVector targetDiff = (cam->m_vecSource - target);
         float f = tan(cam->m_fFOV * 0.5f * 0.017453292);
@@ -342,8 +364,14 @@ void CCamNew::Process_AvoidCollisions(float length) {
             bool isTypePed = entity->m_nType == ENTITY_TYPE_PED;
 
             if (isTypePed && entity->IsVisible() && Magnitude2d((center - entity->GetPosition())) < 0.5f) {
-                vecEntities[i] = entity;
-                entity->m_nFlags.bIsVisible = false;
+#ifdef GTA3
+                if (TheCamera.m_nTransitionState == 0) {
+#else
+                if (TheCamera.m_uiTransitionState == 0) {
+#endif
+                    vecEntities[i] = entity;
+                    entity->m_nFlags.bIsVisible = false;
+                }
             }
             else if (!isTypePed) {
                 CVector distFromPoint = gaTempSphereColPoints[0].m_vecPoint - cam->m_vecSource;

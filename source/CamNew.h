@@ -6,6 +6,15 @@ enum {
     TYPE_STRAFE,
 };
 
+enum {
+#ifdef GTA3
+    LAST_CAM_MODE = 43,
+#else
+    LAST_CAM_MODE = 46,
+#endif
+    MODE_AIMWEAPON = 47,
+};
+
 class CCamNew {
 public:
     CCam* cam;
@@ -16,7 +25,6 @@ public:
     float previousPedZoomValue;
     float previoudPedZoomValueSmooth;
     float previousPedZoomValueScript;
-    float length;
 
 public:
     CCamNew();

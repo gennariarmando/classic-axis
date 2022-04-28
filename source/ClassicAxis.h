@@ -16,6 +16,11 @@ public:
     RwV3d lastLockOnPos;
     int timeLockOn;
     CRGBA lastLockOnColor;
+    CPed* thirdPersonMouseTarget;
+    CVector previousSource;
+    CVector previousFront;
+    CVector previousUp;
+    short previousCamMode;
 
 public:
     ClassicAxis();
@@ -27,9 +32,11 @@ public:
     bool IsTypeTwoHanded(CPed* ped);
     void DrawCrosshair();
     void DrawAutoAimTarget();
+    void DrawTriangleForMouseRecruitPed();
     void ClearWeaponTarget(CPlayerPed* ped);
     void ProcessPlayerPedControl(CPed* ped);
     float Find3rdPersonQuickAimPitch(float y);
+    void Find3rdPersonMouseTarget(CPlayerPed* ped);
 };
 
 extern ClassicAxis classicAxis;

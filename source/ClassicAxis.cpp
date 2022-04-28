@@ -33,8 +33,11 @@ ClassicAxis::ClassicAxis() {
         classicAxis.lastLockOnPos = {};
         classicAxis.timeLockOn = 0;
         classicAxis.lastLockOnColor = { 255, 255, 255, 255 };
+        classicAxis.thirdPersonMouseTarget = NULL;
 
         CamNew = std::make_shared<CCamNew>();
+
+        classicAxis.previousCamMode = CamNew->cam->m_nCamMode;
     };
 
     // Patches
@@ -42,15 +45,13 @@ ClassicAxis::ClassicAxis() {
         if (!CamNew)
             return;
 
-        if (classicAxis.isAiming)
-            CamNew->Process_AimWeapon(target, targetOrient, 0.0f, 0.0f);
-        else
-            CamNew->Process_FollowPed(target, targetOrient, 0.0f, 0.0f);
+        CamNew->Process_FollowPed(target, targetOrient, 0.0f, 0.0f);
     };
 
 #ifdef GTA3
     plugin::patch::RedirectCall(0x459A7C, (void(__fastcall*)(CCam*, int, CVector const&, float, float, float))process_FollowPedWithMouse);
     plugin::patch::Nop(0x459A65, 2);
+
 #else
     plugin::patch::RedirectCall(0x483BA1, (void(__fastcall*)(CCam*, int, CVector const&, float, float, float))process_FollowPedWithMouse);
     plugin::patch::Nop(0x483B8A, 2);
@@ -120,11 +121,13 @@ ClassicAxis::ClassicAxis() {
     for (int i = 0; i < ARRAYSIZE(playerShootingDirectionAddr); i++)
         plugin::patch::RedirectCall(playerShootingDirectionAddr[i], (int(__fastcall*)(int, int))playerShootingDirection);
 
-    auto using3rd = [](CCam*, int) { };
+    auto using3rd = [](CCam*, int) { return false; };
 #ifdef GTA3
-    plugin::patch::RedirectCall(0x468E46, (void(__fastcall*)(CCam*, int))using3rd);
+    plugin::patch::SetChar(0x468E83 + 3, 0);
+    plugin::patch::RedirectCall(0x468E46, (bool(__fastcall*)(CCam*, int))using3rd);
 #else
-    plugin::patch::RedirectCall(0x4711DB, (void(__fastcall*)(CCam*, int))using3rd);
+    plugin::patch::SetChar(0x471218 + 3, 0);
+    plugin::patch::RedirectCall(0x4711DB, (bool(__fastcall*)(CCam*, int))using3rd);
 #endif
 #if GTA3
     auto clearWeaponTarget = [](CPlayerPed* playa, int) {
@@ -152,6 +155,93 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::RedirectCall(0x52C274, (void(__fastcall*)(CPed*, int))clearAimFlag);
 #endif
 
+    // No point gun cam
+#ifdef GTA3
+    plugin::patch::Nop(0x469C14, 6);
+    plugin::patch::Nop(0x469CDD, 9);
+    plugin::patch::Nop(0x469D5A, 9);
+#else
+    plugin::patch::Nop(0x472422, 6);
+    plugin::patch::Nop(0x4724D5, 9);
+    plugin::patch::Nop(0x47254F, 9);
+#endif
+
+    // Transition duration
+#ifdef GTA3
+    plugin::ThiscallEvent <plugin::AddressList<0x46A9C3, plugin::H_CALL, 0x46AB94, plugin::H_CALL, 0x46AC11, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
+#else
+    plugin::ThiscallEvent <plugin::AddressList<0x47360B, plugin::H_CALL, 0x4734E5, plugin::H_CALL, 0x473305, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
+#endif
+
+    onStartingTransition.after += [](CCam* cam, short mode) {
+        if (mode == MODE_AIMWEAPON || mode == 4) {
+            if (classicAxis.previousCamMode == MODE_AIMWEAPON || classicAxis.previousCamMode == 4) {
+                const int transitionDuration = 550;
+#ifdef GTA3
+                TheCamera.m_nTransitionDuration = transitionDuration;
+                TheCamera.m_fFractionInterToStopMoving = 0.1f;
+                TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
+#else
+                TheCamera.m_uiTransitionDuration = transitionDuration;
+                TheCamera.m_uiTransitionDurationTargetCoors = transitionDuration;
+                TheCamera.m_fFractionInterToStopMoving = 0.1f;
+                TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
+#endif
+            }
+        }
+    };
+
+#ifdef GTA3
+    plugin::ThiscallEvent <plugin::AddressList<0x46D5FF, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CCam*, 0>, void(CCam*)> onProcessingCam;
+#else
+    plugin::ThiscallEvent <plugin::AddressList<0x46C7A3, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CCam*, 0>, void(CCam*)> onProcessingCam;
+#endif
+    onProcessingCam += [](CCam* cam) {
+        if (cam->m_nCamMode > LAST_CAM_MODE) {
+            classicAxis.previousSource = cam->m_vecSource;
+            classicAxis.previousFront = cam->m_vecFront;
+            classicAxis.previousUp = cam->m_vecUp;
+        }
+    };
+
+    onProcessingCam.after += [](CCam* cam) {
+        if (cam->m_nCamMode > LAST_CAM_MODE) {
+            cam->m_vecSource = classicAxis.previousSource;
+            cam->m_vecFront = classicAxis.previousFront;
+            cam->m_vecUp = classicAxis.previousUp;
+        }
+
+        CVector target = {};
+        float targetOrient = 0.0f;
+        CEntity* e = cam->m_pCamTargetEntity;
+
+        if (!e)
+            return;
+
+        if (cam->m_bCamLookingAtVector)
+            target = cam->m_vecCamFixedModeVector;
+        else {
+            target = e->GetPosition();
+
+#ifdef GTA3
+            CMatrix& mat = e->m_matrix;
+#else
+            CMatrix& mat = e->m_placement;
+#endif
+            if (mat.up.x == 0.0f && mat.up.y == 0.0f)
+                targetOrient = 0.0f;
+            else
+                targetOrient = CGeneral::GetATanOfXY(mat.up.x, mat.up.y);
+        }
+
+        char mode = cam->m_nCamMode;
+        switch (mode) {
+        case MODE_AIMWEAPON:
+            CamNew->Process_AimWeapon(target, targetOrient, 0.0f, 0.0f);
+            break;
+        }
+    };
+
     auto camControl = [](int, int) {
         TheCamera.m_bUseMouse3rdPerson = true;
         FrontEndMenuManager.m_ControlMethod = 0;
@@ -160,8 +250,8 @@ ClassicAxis::ClassicAxis() {
 #ifdef GTAVC
         plugin::patch::SetPointer(0x46F925 + 2, &classicAxis.settings.cameraCrosshairMultX);
 #endif
-        if (!CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_bHasLockOnTarget)
-            TheCamera.CamControl();
+
+        TheCamera.CamControl();
     };
 #ifdef GTA3
     plugin::patch::RedirectCall(0x46D500, (void(__fastcall*)(int, int))camControl);
@@ -176,7 +266,8 @@ ClassicAxis::ClassicAxis() {
 #endif
     onProcessingPlayerControl += [](CPed* ped) {
         CPlayerPed* playa = static_cast<CPlayerPed*>(ped);
-        classicAxis.ProcessPlayerPedControl(ped);
+        classicAxis.ProcessPlayerPedControl(playa);
+        classicAxis.Find3rdPersonMouseTarget(playa);
     };
 
 #ifdef GTA3
@@ -193,6 +284,9 @@ ClassicAxis::ClassicAxis() {
         bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
         if (!disableAutoAim)
             classicAxis.DrawAutoAimTarget();
+
+        if (classicAxis.settings.showTriangleForMouseRecruit)
+            classicAxis.DrawTriangleForMouseRecruitPed();
     };
 
     if (classicAxis.settings.lockOnTargetType > TARGET_DEFAULT) {
@@ -295,7 +389,7 @@ ClassicAxis::ClassicAxis() {
     };
 #endif
 
-    // Make 1st cam mode point on the front
+    // Make 1st person cam mode point on the front
 #ifdef GTA3
     plugin::ThiscallEvent <plugin::AddressList<0x4F1FDB, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick4N<CCam*, 0, int, 1, int, 2, int, 3>, void(CCam*, int, int, int)> onSet1stPersonPlayerCamMode;
     plugin::patch::Nop(0x461B61, 10);
@@ -319,8 +413,8 @@ ClassicAxis::ClassicAxis() {
 #endif
     onFindingLockOnTarget += [](CPlayerPed* ped) {
         bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
-
-        if (disableAutoAim)
+        if (disableAutoAim || 
+            (ped->m_pPointGunAt && !ped->m_pPointGunAt->GetIsOnScreenComplex()))
             ped->ClearWeaponTarget();
     };
 }
@@ -442,6 +536,13 @@ void ClassicAxis::DrawCrosshair() {
     CPlayerPed* playa = FindPlayerPed();
     CPad* pad = CPad::GetPad(0);
 
+#ifdef GTA3
+    if (TheCamera.m_nTransitionState != 0)
+#else
+    if (TheCamera.m_uiTransitionState != 0)
+#endif
+        return;
+
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
     RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
@@ -451,7 +552,7 @@ void ClassicAxis::DrawCrosshair() {
 
     if (playa) {
         const eWeaponType weaponType = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponType;
-        char Mode = cam.m_nCamMode;
+        char mode = cam.m_nCamMode;
         float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
         float y = RsGlobal.maximumHeight * TheCamera.m_f3rdPersonCHairMultY;
         y -= ScaleY(2.0f);
@@ -461,7 +562,7 @@ void ClassicAxis::DrawCrosshair() {
         CSprite2d* crosshair = &CHud::Sprites[HUD_SITEM16];
         if (crosshair) {
             if (classicAxis.isAiming) {
-                if (!playa->m_bInVehicle && Mode == 4 && !pad->DisablePlayerControls) {
+                if (!playa->m_bInVehicle && (mode == 4 || mode == MODE_AIMWEAPON) && !pad->DisablePlayerControls) {
                     if (!playa->m_bHasLockOnTarget && classicAxis.IsWeaponPossiblyCompatible(playa))
                         crosshair->Draw(CRect(x - ScaleX(14.0f), y - ScaleY(14.0f), x + ScaleX(14.0f), y + ScaleY(14.0f)), CRGBA(255, 255, 255, 255));
                 }
@@ -494,12 +595,11 @@ void ClassicAxis::DrawAutoAimTarget() {
             lastLockOnPos.y = e->GetPosition().y;
             lastLockOnPos.z = e->GetPosition().z;
 
-            if (e->m_nType = ENTITY_TYPE_PED) {
+            if (e->m_nType == ENTITY_TYPE_PED) {
                 CPed* ep = static_cast<CPed*>(e);
 
                 if (ep) {
                     ep->m_PedIK.GetComponentPosition(lastLockOnPos, 1);
-                    lastLockOnPos.z += 0.25f;
 
                     float health = ep->m_fHealth / 100.0f;
 
@@ -512,6 +612,8 @@ void ClassicAxis::DrawAutoAimTarget() {
                         col = CRGBA(0, 0, 0, 255);
                 }
             }
+
+            lastLockOnPos.z += 0.25f;
 
             if (playa->m_bHasLockOnTarget && e) {
                 targetMode = 1;
@@ -551,6 +653,48 @@ void ClassicAxis::DrawAutoAimTarget() {
     }
 }
 
+void ClassicAxis::DrawTriangleForMouseRecruitPed() {
+#ifdef GTA3
+    if (TheCamera.m_nTransitionState != 0)
+#else
+    if (TheCamera.m_uiTransitionState != 0)
+#endif
+        return;
+
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
+    RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, reinterpret_cast<void*>(FALSE));
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, reinterpret_cast<void*>(FALSE));
+
+    CPlayerPed* playa = FindPlayerPed();
+
+    if (playa) {
+        if (thirdPersonMouseTarget) {
+            RwV3d in;
+            RwV3d out;
+            float w, h;
+
+            in.x = thirdPersonMouseTarget->GetPosition().x;
+            in.y = thirdPersonMouseTarget->GetPosition().y;
+            in.z = thirdPersonMouseTarget->GetPosition().z;
+            thirdPersonMouseTarget->m_PedIK.GetComponentPosition(in, 1);
+            in.z += 1.0f;
+
+            float health = thirdPersonMouseTarget->m_fHealth / 100.0f;
+            CRGBA col = CRGBA((1.0f - health) * 255, health * 255, 0, 150);
+
+            if (health <= 0.0f)
+                col = CRGBA(0, 0, 0, 255);
+
+            if (CSprite::CalcScreenCoors(in, &out, &w, &h, false)) {
+                DrawSATriangleForMouseRecruit(out.x, out.y, w / 128.0f, col);
+            }
+        }
+    }
+}
+
 void ClassicAxis::ClearWeaponTarget(CPlayerPed* ped) {
     ped->m_bHasLockOnTarget = false;
     ped->m_pPointGunAt = NULL;
@@ -582,8 +726,19 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
     isAiming = false;
     ignoreRotation = false;
 
-    if (!pad->DisablePlayerControls && IsAbleToAim(playa) && pad->GetTarget() && TheCamera.GetLookDirection() != 0 && IsWeaponPossiblyCompatible(playa) && mode == 4) {
+    if (!pad->DisablePlayerControls && IsAbleToAim(playa) && pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && !IsType1stPerson(playa) && (mode == 4 || mode == MODE_AIMWEAPON)) {
         isAiming = true;
+        if (mode != MODE_AIMWEAPON && playa->IsPedInControl() &&         
+#ifdef GTA3
+            (TheCamera.m_nTransitionState == 0)
+#else
+            (TheCamera.m_uiTransitionState == 0)
+#endif            
+            ) {
+            TheCamera.TakeControl(FindPlayerPed(), MODE_AIMWEAPON, 1, 0);
+            TheCamera.m_bLookingAtPlayer = false;
+            previousCamMode = mode;
+        }
 
         CEntity* p = playa->m_pPointGunAt;
         float mouseX = pad->NewMouseControllerState.X;
@@ -601,7 +756,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                 in.y = p->GetPosition().y;
                 in.z = p->GetPosition().z;
 
-                if (p->m_nType = ENTITY_TYPE_PED) {
+                if (p->m_nType == ENTITY_TYPE_PED) {
                     CPed* ep = static_cast<CPed*>(p);
                     ep->m_PedIK.GetComponentPosition(in, 1);
                     in.z += 0.25f;
@@ -611,8 +766,16 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                     height = Find3rdPersonQuickAimPitch(out.y / SCREEN_HEIGHT);
                 }
 
-                if (((pXboxPad->HasPadInHands() &&
-                    (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f)) ||
+                bool transitionDone = true;
+#ifdef GTA3
+                if (TheCamera.m_nTransitionState != 0)
+#else
+                if (TheCamera.m_uiTransitionState != 0)
+#endif
+                    transitionDone = false;
+
+                if ((transitionDone && ((pXboxPad->HasPadInHands() &&
+                    (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f))) ||
                     diff.Magnitude() < 0.5f)
                     ClearWeaponTarget(playa);
             }
@@ -681,9 +844,11 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
     }
 
     if (!isAiming) {
-        if (wasPointing && playa->m_ePedState != PEDSTATE_ATTACK) {
-            playa->ClearPointGunAt();
-            playa->ClearWeaponTarget();
+        if (wasPointing) {
+            if (playa->m_ePedState != PEDSTATE_ATTACK && playa->m_nPedFlags.bIsAimingGun) {
+                playa->ClearPointGunAt();
+                playa->ClearWeaponTarget();
+            }
 
 #ifdef GTAVC
             if (wasCrouching) {
@@ -692,11 +857,23 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                 wasCrouching = false;
             }
 #endif				
-            wasPointing = false;
+            if (mode != previousCamMode && 
+#ifdef GTA3
+            (TheCamera.m_nTransitionState == 0)
+#else
+            (TheCamera.m_uiTransitionState == 0)
+#endif                        
+                ) {
+                TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
+                TheCamera.m_bLookingAtPlayer = true;
+                previousCamMode = mode;
+                wasPointing = false;
+            }
+
         }
     }
 
-    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa))
+    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa) && mode == 4)
 #ifndef GTA3
         || (weaponType == WEAPONTYPE_CHAINSAW && playa->m_fTotSpeed > 0.05f)
 #endif
@@ -711,3 +888,51 @@ float ClassicAxis::Find3rdPersonQuickAimPitch(float y) {
     float fov = cam->m_fFOV;
     return -(DegToRad(((0.5f - y) * 1.8f * 0.5f * fov)) + asinf(front.z));
 }
+
+void ClassicAxis::Find3rdPersonMouseTarget(CPlayerPed* ped) {
+    if (classicAxis.pXboxPad->HasPadInHands())
+        return;
+
+    CCam* cam = &TheCamera.m_asCams[TheCamera.m_nActiveCam];
+
+    CVector source;
+    CVector target;
+    CEntity* e = NULL;
+    CColPoint point = {};
+    const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
+    CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    if (isAiming && !ped->m_bInVehicle && (!ped->m_bHasLockOnTarget || !ped->m_pPointGunAt)) {
+        TheCamera.Find3rdPersonCamTargetVector(info->m_fRange, cam->m_vecSource, source, target);
+        if (CWorld::ProcessLineOfSight(source, target, point, e, false, false, true, false, false, false, false
+#ifdef GTAVC
+            , false
+#endif
+        )) {
+            if (e->m_nType == ENTITY_TYPE_PED) {
+                CPed* target = static_cast<CPed*>(e);
+
+                if (target && target != ped && target->m_ePedState != PEDSTATE_DEAD) {
+                    if (!thirdPersonMouseTarget || thirdPersonMouseTarget != target) {
+                        thirdPersonMouseTarget = target;
+                        thirdPersonMouseTarget->RegisterReference(&e);
+                        thirdPersonMouseTarget->ReactToPointGun(ped);
+#ifdef GTAVC
+                        ped->Say(117);
+#endif
+                    }
+                }
+            }
+            return;
+        }
+    }
+
+    if (thirdPersonMouseTarget) {
+#ifdef GTAVC
+        e = static_cast<CEntity*>(thirdPersonMouseTarget);
+        thirdPersonMouseTarget->CleanUpOldReference(&e);
+#endif
+        thirdPersonMouseTarget = NULL;
+    }
+}
+

@@ -10,6 +10,7 @@ class Settings {
 public:
     bool forceAutoAim;
     int lockOnTargetType;
+    bool showTriangleForMouseRecruit;
     bool altKeyWalk;
     bool lcsAimingCoords;
     float cameraCrosshairMultX;
