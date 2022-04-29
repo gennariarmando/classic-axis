@@ -8,11 +8,12 @@ enum {
 
 enum {
 #ifdef GTA3
-    LAST_CAM_MODE = 43,
+    LAST_CAM_MODE = MODE_HELI_CANNON_1ST_PERSON,
 #else
-    LAST_CAM_MODE = 46,
+    LAST_CAM_MODE = MODE_CAMERA,
 #endif
-    MODE_AIMWEAPON = 47,
+    MODE_PLACEHOLDER = LAST_CAM_MODE,
+    MODE_AIMWEAPON,
 };
 
 class CCamNew {

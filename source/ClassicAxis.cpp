@@ -25,19 +25,18 @@ ClassicAxis::ClassicAxis() {
 
     plugin::Events::initRwEvent += [] {
         GInput_Load(&classicAxis.pXboxPad);
-        classicAxis.isAiming = false;
-        classicAxis.wasPointing = false;
-        classicAxis.wasCrouching = false;
-        classicAxis.ignoreRotation = false;
-        classicAxis.forceRealMoveAnim = false;
-        classicAxis.lastLockOnPos = {};
-        classicAxis.timeLockOn = 0;
-        classicAxis.lastLockOnColor = { 255, 255, 255, 255 };
-        classicAxis.thirdPersonMouseTarget = NULL;
 
-        CamNew = std::make_shared<CCamNew>();
+        classicAxis.Clear();
+    };
 
-        classicAxis.previousCamMode = CamNew->cam->m_nCamMode;
+#ifdef GTA3
+    plugin::CdeclEvent < plugin::AddressList<0x48C7BE, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickNone, void()> onReinitGame;
+#else
+    plugin::CdeclEvent < plugin::AddressList<0x4A46F1, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickNone, void()> onReinitGame;
+#endif
+
+    onReinitGame.after += [] {
+        classicAxis.Clear();
     };
 
     // Patches
@@ -168,14 +167,14 @@ ClassicAxis::ClassicAxis() {
 
     // Transition duration
 #ifdef GTA3
-    plugin::ThiscallEvent <plugin::AddressList<0x46A9C3, plugin::H_CALL, 0x46AB94, plugin::H_CALL, 0x46AC11, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
+    plugin::ThiscallEvent <plugin::AddressList<0x46A9C3, plugin::H_CALL, 0x46AB94, plugin::H_CALL, 0x46AC11, plugin::H_CALL, 0x470D8C, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
 #else
-    plugin::ThiscallEvent <plugin::AddressList<0x47360B, plugin::H_CALL, 0x4734E5, plugin::H_CALL, 0x473305, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
+    plugin::ThiscallEvent <plugin::AddressList<0x47360B, plugin::H_CALL, 0x4734E5, plugin::H_CALL, 0x473305, plugin::H_CALL, 0x46AB00, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick2N<CCam*, 0, short, 1>, void(CCam*, short)> onStartingTransition;
 #endif
 
     onStartingTransition.after += [](CCam* cam, short mode) {
         if (mode == MODE_AIMWEAPON || mode == 4) {
-            if (classicAxis.previousCamMode == MODE_AIMWEAPON || classicAxis.previousCamMode == 4) {
+            if (classicAxis.switchTransitionSpeed) {
                 const int transitionDuration = 550;
 #ifdef GTA3
                 TheCamera.m_nTransitionDuration = transitionDuration;
@@ -187,6 +186,8 @@ ClassicAxis::ClassicAxis() {
                 TheCamera.m_fFractionInterToStopMoving = 0.1f;
                 TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
 #endif
+                classicAxis.switchTransitionSpeed = false;
+                classicAxis.camUseCurrentAngle = true;
             }
         }
     };
@@ -196,7 +197,7 @@ ClassicAxis::ClassicAxis() {
 #else
     plugin::ThiscallEvent <plugin::AddressList<0x46C7A3, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CCam*, 0>, void(CCam*)> onProcessingCam;
 #endif
-    onProcessingCam += [](CCam* cam) {
+    onProcessingCam.before += [](CCam* cam) {
         if (cam->m_nCamMode > LAST_CAM_MODE) {
             classicAxis.previousSource = cam->m_vecSource;
             classicAxis.previousFront = cam->m_vecFront;
@@ -225,10 +226,10 @@ ClassicAxis::ClassicAxis() {
 #else
         CMatrix& mat = e->m_placement;
 #endif
-        if (mat.up.x == 0.0f && mat.up.y == 0.0f)
+        if (mat.at.x == 0.0f && mat.at.y == 0.0f)
             targetOrient = 0.0f;
         else
-            targetOrient = CGeneral::GetATanOfXY(mat.up.x, mat.up.y);
+            targetOrient = CGeneral::GetATanOfXY(mat.at.x, mat.at.y);
 
         char mode = cam->m_nCamMode;
         switch (mode) {
@@ -336,11 +337,23 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::RedirectCall(0x537DC9, (void(__fastcall*)(CPlayerPed*, int, CPad*))processWeaponSwitch);
 #endif
 
-    // No smooth weapon spray
+    // Weapon smooth spray
+    auto doWeaponSmoothSpray = [](CPlayerPed* ped, int) {
 #ifdef GTA3
-    plugin::patch::Nop(0x4F13C8, 9);
+        return false;
+#else
+        if (ped->m_nPedFlags.bIsDucking)
+            return 0.00001f;
+        else
+            return -1.0f;
 #endif
-
+    };
+#ifdef GTA3
+    plugin::patch::RedirectCall(0x4F13CC, (bool(__fastcall*)(CPlayerPed*, int))doWeaponSmoothSpray);
+#else
+    plugin::patch::RedirectCall(0x535F4C, (float(__fastcall*)(CPlayerPed*, int))doWeaponSmoothSpray);
+#endif
+   
     // Point gun while ducking fix
 #ifdef GTAVC
     plugin::ThiscallEvent <plugin::AddressList<0x53491B, plugin::H_CALL, 0x535326, plugin::H_CALL, 0x5355C6, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPick3N<CPed*, 0, int, 1, __int16, 2>, void(CPed*, int, __int16)> onDucking;
@@ -446,6 +459,31 @@ void ClassicAxis::RotatePlayer(CPed* ped, float angle, bool smooth) {
     }
 }
 
+void ClassicAxis::Clear() {
+    isAiming = false;
+    wasPointing = false;
+    wasCrouching = false;
+    ignoreRotation = false;
+    forceRealMoveAnim = false;
+    lastLockOnPos = {};
+    timeLockOn = 0;
+    lastLockOnColor = { 255, 255, 255, 255 };
+    thirdPersonMouseTarget = NULL;
+
+    switchTransitionSpeed = false;
+
+    if (!CamNew)
+        CamNew = std::make_shared<CCamNew>();
+
+    previousSource = CamNew->cam->m_vecSource;
+    previousFront = CamNew->cam->m_vecFront;
+    previousUp = CamNew->cam->m_vecUp;
+    previousCamMode = CamNew->cam->m_nCamMode;
+    previousHorAngle = CamNew->cam->m_fHorizontalAngle;
+    previousVerAngle = CamNew->cam->m_fVerticalAngle;
+    camUseCurrentAngle = false;
+}
+
 bool ClassicAxis::IsAbleToAim(CPed* ped) {
     ePedState s = ped->m_ePedState;
     eMoveState m = ped->m_eMoveState;
@@ -535,6 +573,13 @@ void ClassicAxis::DrawCrosshair() {
     CPad* pad = CPad::GetPad(0);
 
     if (cam.m_nCamMode != MODE_AIMWEAPON)
+        return;
+
+#ifdef GTA3
+    if (TheCamera.m_nTransitionState != 0)
+#else
+    if (TheCamera.m_uiTransitionState != 0)
+#endif
         return;
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
@@ -731,6 +776,10 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
             ) {
             TheCamera.TakeControl(FindPlayerPed(), MODE_AIMWEAPON, 1, 0);
             TheCamera.m_bLookingAtPlayer = false;
+            classicAxis.switchTransitionSpeed = true;
+            classicAxis.previousHorAngle = cam.m_fHorizontalAngle;
+            classicAxis.previousVerAngle = cam.m_fVerticalAngle;
+
             previousCamMode = mode;
         }
 
@@ -831,7 +880,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 
 #ifdef GTAVC
         if (playa->m_nPedFlags.bIsDucking && !wasCrouching) {
-            playa->StartFightAttack(1);
+            playa->m_ePedState = PEDSTATE_FIGHT;
             wasCrouching = true;
         }
 #endif
@@ -860,6 +909,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                 ) {
                 TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
                 TheCamera.m_bLookingAtPlayer = true;
+                classicAxis.switchTransitionSpeed = true;
+                classicAxis.previousHorAngle = cam.m_fHorizontalAngle;
+                classicAxis.previousVerAngle = cam.m_fVerticalAngle;
                 previousCamMode = mode;
                 wasPointing = false;
             }
@@ -867,11 +919,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
         }
     }
 
-    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa) && mode == 4)
-#ifndef GTA3
-        || (weaponType == WEAPONTYPE_CHAINSAW && playa->m_fTotSpeed > 0.05f)
-#endif
-        )) {
+    if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa) && mode == 4))) {
         RotatePlayer(playa, front, true);
     }
 }

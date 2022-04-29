@@ -20,11 +20,16 @@ public:
     CVector previousSource;
     CVector previousFront;
     CVector previousUp;
+    float previousHorAngle;
+    float previousVerAngle;
+    bool camUseCurrentAngle;
     short previousCamMode;
+    bool switchTransitionSpeed;
 
 public:
     ClassicAxis();
     void RotatePlayer(CPed* ped, float angle, bool smooth);
+    void Clear();
     bool IsAbleToAim(CPed* ped);
     bool IsType1stPerson(CPed* ped);
     bool IsWeaponPossiblyCompatible(CPed* ped);

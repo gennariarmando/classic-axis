@@ -64,7 +64,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     CVector dist = cam->m_vecSource - targetCoords;
 
     if (cam->m_bResetStatics) {
-        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
+        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(dist.x, dist.y);
         cam->m_fVerticalAngle = 0.0f;
 
         dist = maxDist * CVector(cosf(cam->m_fVerticalAngle) * cosf(cam->m_fHorizontalAngle), cosf(cam->m_fVerticalAngle) * sinf(cam->m_fHorizontalAngle), sinf(cam->m_fVerticalAngle));
@@ -83,13 +83,14 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     length = dist.Magnitude();
 
     bool lockMovement = false;
+    if (usingController && 
+        
 #ifdef GTA3
-    if (TheCamera.m_nTransitionState != 0)
+        (TheCamera.m_nTransitionState == 0)
 #else
-    if (TheCamera.m_uiTransitionState != 0)
-#endif
-        lockMovement = true;
-    if (usingController && !lockMovement) {
+        (TheCamera.m_uiTransitionState == 0)
+#endif        
+        ) {
         cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
         cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
     }
@@ -136,8 +137,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     while (cam->m_fHorizontalAngle >= M_PI) cam->m_fHorizontalAngle -= 2.0f * M_PI;
     while (cam->m_fHorizontalAngle < -M_PI) cam->m_fHorizontalAngle += 2.0f * M_PI;
 
-    if (cam->m_fVerticalAngle > DegToRad(45.0f))
-        cam->m_fVerticalAngle = DegToRad(45.0f);
+    if (cam->m_fVerticalAngle > DegToRad(60.0f))
+        cam->m_fVerticalAngle = DegToRad(60.0f);
     else if (cam->m_fVerticalAngle < -DegToRad(89.5f))
         cam->m_fVerticalAngle = -DegToRad(89.5f);
 
@@ -157,6 +158,25 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     if (TheCamera.m_bUseTransitionBeta)
         cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-cos(cam->m_fTransitionBeta), -sin(cam->m_fTransitionBeta));
+
+    if (TheCamera.m_bCamDirectlyBehind) {
+        cam->m_bCollisionChecksOn = 1;
+        cam->m_fHorizontalAngle = targetOrient;
+        cam->m_fVerticalAngle = 0.0f;
+        TheCamera.m_bCamDirectlyBehind = false;
+    }
+
+    if (TheCamera.m_bCamDirectlyInFront) {
+        cam->m_fHorizontalAngle = targetOrient + M_PI;
+        cam->m_fVerticalAngle = 0.0f;
+        TheCamera.m_bCamDirectlyInFront = false;
+    }
+
+    if (classicAxis.camUseCurrentAngle) {
+        cam->m_fHorizontalAngle = classicAxis.previousHorAngle;
+        cam->m_fVerticalAngle = classicAxis.previousVerAngle;
+        classicAxis.camUseCurrentAngle = false;
+    }
 
     cam->m_fDistanceBeforeChanges = (cam->m_vecSource - targetCoords).Magnitude();
 
@@ -230,24 +250,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     CVector dist = cam->m_vecSource - targetCoords;
 
-    if (cam->m_bResetStatics) {
-        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
-        cam->m_fVerticalAngle = 0.0f;
-
-        dist = maxDist * CVector(cosf(cam->m_fVerticalAngle) * cosf(cam->m_fHorizontalAngle), cosf(cam->m_fVerticalAngle) * sinf(cam->m_fHorizontalAngle), sinf(cam->m_fVerticalAngle));
-        cam->m_vecSource = targetCoords + dist;
-
-        cam->m_bResetStatics = false;
-    }
-
     bool lockMovement = false;
-#ifdef GTA3
-    if (TheCamera.m_nTransitionState != 0)
-#else
-    if (TheCamera.m_uiTransitionState != 0)
-#endif
-        lockMovement = true;
-
     CEntity* p = e->m_pPointGunAt;
     if (e->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
         CVector target = p->GetPosition();
@@ -308,6 +311,25 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         cam->m_fVerticalAngle = DegToRad(45.0f);
     else if (cam->m_fVerticalAngle < -DegToRad(45.0f))
         cam->m_fVerticalAngle = -DegToRad(45.0f);
+
+    if (TheCamera.m_bCamDirectlyBehind) {
+        cam->m_bCollisionChecksOn = 1;
+        cam->m_fHorizontalAngle = targetOrient;
+        cam->m_fVerticalAngle = 0.0f;
+        TheCamera.m_bCamDirectlyBehind = false;
+    }
+
+    if (TheCamera.m_bCamDirectlyInFront) {
+        cam->m_fHorizontalAngle = targetOrient + M_PI;
+        cam->m_fVerticalAngle = 0.0f;
+        TheCamera.m_bCamDirectlyInFront = false;
+    }
+
+    if (classicAxis.camUseCurrentAngle) {
+        cam->m_fHorizontalAngle = classicAxis.previousHorAngle;
+        cam->m_fVerticalAngle = classicAxis.previousVerAngle;
+        classicAxis.camUseCurrentAngle = false;
+    }
 
     cam->m_fDistanceBeforeChanges = (cam->m_vecSource - targetCoords).Magnitude();
     cam->m_vecFront = CVector(cos(cam->m_fVerticalAngle) * cos(cam->m_fHorizontalAngle), cos(cam->m_fVerticalAngle) * sin(cam->m_fHorizontalAngle), sin(cam->m_fVerticalAngle));
@@ -374,7 +396,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
                 }
             }
             else if (!isTypePed) {
-                CVector distFromPoint = gaTempSphereColPoints[0].m_vecPoint - cam->m_vecSource;
+                CVector distFromPoint = gaTempSphereColPoints[0].m_vecPoint - targetCoords;
                 float frontDist = DotProduct(distFromPoint, cam->m_vecFront);
                 float dist = (distFromPoint - cam->m_vecFront * frontDist).Magnitude() / viewPlaneWidth;
 
@@ -383,7 +405,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
                     RwCameraSetNearClipPlane(Scene.m_pCamera, dist);
 
                 if (dist == 0.1f)
-                    cam->m_vecSource += (targetCoords - cam->m_vecSource) * 0.3f;
+                    cam->m_vecSource += (targetCoords - cam->m_vecSource) * (dist / length);
             }
         }
     }
