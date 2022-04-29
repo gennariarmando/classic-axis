@@ -64,7 +64,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     CVector dist = cam->m_vecSource - targetCoords;
 
     if (cam->m_bResetStatics) {
-        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(dist.x, dist.y);
+        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
         cam->m_fVerticalAngle = 0.0f;
 
         dist = maxDist * CVector(cosf(cam->m_fVerticalAngle) * cosf(cam->m_fHorizontalAngle), cosf(cam->m_fVerticalAngle) * sinf(cam->m_fHorizontalAngle), sinf(cam->m_fVerticalAngle));
