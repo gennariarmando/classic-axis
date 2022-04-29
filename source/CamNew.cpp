@@ -83,14 +83,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     length = dist.Magnitude();
 
     bool lockMovement = false;
-    if (usingController && 
-        
-#ifdef GTA3
-        (TheCamera.m_nTransitionState == 0)
-#else
-        (TheCamera.m_uiTransitionState == 0)
-#endif        
-        ) {
+    if (usingController && TheCamera.m_nTransitionState == 0) {
         cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
         cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
     }
@@ -386,11 +379,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
             bool isTypePed = entity->m_nType == ENTITY_TYPE_PED;
 
             if (isTypePed && entity->IsVisible() && Magnitude2d((center - entity->GetPosition())) < 0.5f) {
-#ifdef GTA3
                 if (TheCamera.m_nTransitionState == 0) {
-#else
-                if (TheCamera.m_uiTransitionState == 0) {
-#endif
                     vecEntities[i] = entity;
                     entity->m_nFlags.bIsVisible = false;
                 }

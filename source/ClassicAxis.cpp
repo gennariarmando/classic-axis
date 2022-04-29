@@ -176,16 +176,14 @@ ClassicAxis::ClassicAxis() {
         if (mode == MODE_AIMWEAPON || mode == 4) {
             if (classicAxis.switchTransitionSpeed) {
                 const int transitionDuration = 550;
-#ifdef GTA3
+
                 TheCamera.m_nTransitionDuration = transitionDuration;
-                TheCamera.m_fFractionInterToStopMoving = 0.1f;
-                TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
-#else
-                TheCamera.m_uiTransitionDuration = transitionDuration;
-                TheCamera.m_uiTransitionDurationTargetCoors = transitionDuration;
-                TheCamera.m_fFractionInterToStopMoving = 0.1f;
-                TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
+#ifdef GTAVC
+                TheCamera.m_nTransitionDurationTargetCoors = transitionDuration;
 #endif
+                TheCamera.m_fFractionInterToStopMoving = 0.1f;
+                TheCamera.m_fFractionInterToStopCatchUp = 0.9f;
+
                 classicAxis.switchTransitionSpeed = false;
                 classicAxis.camUseCurrentAngle = true;
             }
@@ -575,11 +573,7 @@ void ClassicAxis::DrawCrosshair() {
     if (cam.m_nCamMode != MODE_AIMWEAPON)
         return;
 
-#ifdef GTA3
     if (TheCamera.m_nTransitionState != 0)
-#else
-    if (TheCamera.m_uiTransitionState != 0)
-#endif
         return;
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
@@ -693,11 +687,7 @@ void ClassicAxis::DrawAutoAimTarget() {
 }
 
 void ClassicAxis::DrawTriangleForMouseRecruitPed() {
-#ifdef GTA3
     if (TheCamera.m_nTransitionState != 0)
-#else
-    if (TheCamera.m_uiTransitionState != 0)
-#endif
         return;
 
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
@@ -767,13 +757,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 
     if (!pad->DisablePlayerControls && IsAbleToAim(playa) && pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && !IsType1stPerson(playa) && (mode == 4 || mode == MODE_AIMWEAPON)) {
         isAiming = true;
-        if (mode != MODE_AIMWEAPON && playa->IsPedInControl() &&         
-#ifdef GTA3
-            (TheCamera.m_nTransitionState == 0)
-#else
-            (TheCamera.m_uiTransitionState == 0)
-#endif            
-            ) {
+        if (mode != MODE_AIMWEAPON && playa->IsPedInControl() && TheCamera.m_nTransitionState == 0) {
             TheCamera.TakeControl(FindPlayerPed(), MODE_AIMWEAPON, 1, 0);
             TheCamera.m_bLookingAtPlayer = false;
             classicAxis.switchTransitionSpeed = true;
@@ -810,11 +794,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
                 }
 
                 bool transitionDone = true;
-#ifdef GTA3
                 if (TheCamera.m_nTransitionState != 0)
-#else
-                if (TheCamera.m_uiTransitionState != 0)
-#endif
                     transitionDone = false;
 
                 if ((transitionDone && ((pXboxPad->HasPadInHands() &&
@@ -895,18 +875,15 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
 
 #ifdef GTAVC
             if (wasCrouching) {
-                if (IsAbleToAim(playa))
+                if (currentWeapon.m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO && currentWeapon.m_eWeaponState != WEAPONSTATE_RELOADING &&
+                    IsAbleToAim(playa)) {
                     CAnimManager::BlendAnimation(playa->m_pRwClump, 0, 159, 4.0f);
+                    playa->SetDuck(60000, 1);
+                }
                 wasCrouching = false;
             }
 #endif				
-            if (mode != previousCamMode && 
-#ifdef GTA3
-            (TheCamera.m_nTransitionState == 0)
-#else
-            (TheCamera.m_uiTransitionState == 0)
-#endif                        
-                ) {
+            if (mode != previousCamMode && TheCamera.m_nTransitionState == 0) {
                 TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
                 TheCamera.m_bLookingAtPlayer = true;
                 classicAxis.switchTransitionSpeed = true;
