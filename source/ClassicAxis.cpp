@@ -576,6 +576,9 @@ void ClassicAxis::DrawCrosshair() {
     if (TheCamera.m_nTransitionState != 0)
         return;
 
+    if (!playa->m_nFlags.bIsVisible)
+        return;
+
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, reinterpret_cast<void*>(TRUE));
     RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void*>(rwBLENDSRCALPHA));
     RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void*>(rwBLENDINVSRCALPHA));
