@@ -23,9 +23,6 @@ public:
     bool cameraInput;
     std::vector<CEntity*> vecEntities;
     float previousPedZoomIndicator;
-    float previousPedZoomValue;
-    float previoudPedZoomValueSmooth;
-    float previousPedZoomValueScript;
 
 public:
     CCamNew();

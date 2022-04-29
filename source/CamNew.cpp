@@ -28,9 +28,6 @@ CCamNew::CCamNew() {
     cameraInput = false;
     vecEntities.resize(5);
     previousPedZoomIndicator = 0.0f;
-    previousPedZoomValue = 0.0f;
-    previoudPedZoomValueSmooth = 0.0f;
-    previousPedZoomValueScript = 0.0f;
 }
 
 CCamNew::~CCamNew() {
@@ -74,12 +71,20 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     }
 
     float length = dist.Magnitude();
-    if (length == 0.0f)
-        dist = CVector(1.0f, 1.0f, 0.0f);
-    else if (length < minDist)
-        dist *= minDist / length;
-    else if (length > maxDist)
+
+    if (previousPedZoomIndicator != maxDist) {
         dist *= maxDist / length;
+        previousPedZoomIndicator = maxDist;
+    }
+    else {
+        if (length == 0.0f)
+            dist = CVector(1.0f, 1.0f, 0.0f);
+        else if (length < minDist)
+            dist *= minDist / length;
+        else if (length > maxDist)
+            dist *= maxDist / length;
+    }
+
     length = dist.Magnitude();
 
     bool lockMovement = false;
@@ -183,11 +188,6 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
 
-    previousPedZoomIndicator = TheCamera.m_fPedZoomIndicator;
-    previousPedZoomValue = TheCamera.m_fPedZoomValue;
-    previoudPedZoomValueSmooth = TheCamera.m_fPedZoomValueSmooth;
-    previousPedZoomValueScript = TheCamera.m_fPedZoomValueScript;
-
     Process_AvoidCollisions(length);
     GetVectorsReadyForRW();
 }
@@ -216,8 +216,8 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
         if (!info->m_bCanAimWithArm && info->m_bCanAim) {
-            length -= 0.7f;
-            aimOffset.z += 0.05f;
+            length -= 0.5f;
+            aimOffset.z += 0.025f;
         }
     }
 
@@ -247,12 +247,16 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     CEntity* p = e->m_pPointGunAt;
     if (e->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
         CVector target = p->GetPosition();
-        CVector targetDiff = (cam->m_vecSource - target);
+        CVector distfromTarget = (cam->m_vecSource - target);
+        CVector distFromCamEntity = (e->GetPosition() - target);
         float viewPlaneHeight = tan(DegToRad(cam->m_fFOV) * 0.5f);
-        float horShift = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5f + TheCamera.m_f3rdPersonCHairMultX - 0.5f) * viewPlaneHeight);
-        float verShift = CGeneral::GetATanOfXY(1.0f, viewPlaneHeight * ((0.5f - TheCamera.m_f3rdPersonCHairMultY + 0.5f - TheCamera.m_f3rdPersonCHairMultY) * (1.0f / GetAspectRatio())));
+        float viewPlaneWidth = viewPlaneHeight * GetAspectRatio() * 1.05f;
+
+        float horShift = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5f + TheCamera.m_f3rdPersonCHairMultX - 0.5f) * viewPlaneWidth);
+        float verShift = CGeneral::GetATanOfXY(1.0f, (viewPlaneHeight * 0.0174f) * ((0.5f - TheCamera.m_f3rdPersonCHairMultY + 0.5f - TheCamera.m_f3rdPersonCHairMultY) * (1.0f / GetAspectRatio())));
         cam->m_fHorizontalAngle = e->m_fRotationCur + (M_PI * 0.5f) + horShift;
-        cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(targetDiff), -targetDiff.z) - verShift;
+        cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(distfromTarget), -distfromTarget.z) - verShift;
+
         lockMovement = true;
     }
 
@@ -333,11 +337,6 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     cam->m_vecFront = targetCoords - cam->m_vecSource;
     cam->m_vecFront.Normalise();
-
-    TheCamera.m_fPedZoomIndicator = previousPedZoomIndicator;
-    TheCamera.m_fPedZoomValue = previousPedZoomValue;
-    TheCamera.m_fPedZoomValueSmooth = previoudPedZoomValueSmooth;
-    TheCamera.m_fPedZoomValueScript = previousPedZoomValueScript;
 
     Process_AvoidCollisions(length);
 

@@ -149,7 +149,7 @@ static void DrawSATarget(float x, float y, float dist, float rotationMult, CRGBA
 }
 
 static void DrawSATriangleForMouseRecruit(float x, float y, float dist, CRGBA const& col) {
-    dist = clamp(dist, 0.5f, 1.0f);
+    dist = clamp(dist, 0.0f, 1.0f);
 
     DrawTriangle(x, y, ScaleY(20.0f * dist), ScaleY(10.0f * dist), CVector2D(0.0f, 0.0f), DegToRad(180.0f), col);
 }
