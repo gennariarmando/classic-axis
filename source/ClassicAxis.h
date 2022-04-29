@@ -17,9 +17,6 @@ public:
     int timeLockOn;
     CRGBA lastLockOnColor;
     CPed* thirdPersonMouseTarget;
-    CVector previousSource;
-    CVector previousFront;
-    CVector previousUp;
     float previousHorAngle;
     float previousVerAngle;
     bool camUseCurrentAngle;

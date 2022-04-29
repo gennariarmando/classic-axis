@@ -192,31 +192,16 @@ ClassicAxis::ClassicAxis() {
 
 #ifdef GTA3
     plugin::ThiscallEvent <plugin::AddressList<0x46D5FF, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CCam*, 0>, void(CCam*)> onProcessingCam;
+    plugin::patch::Nop(0x459CD0, 90);
 #else
     plugin::ThiscallEvent <plugin::AddressList<0x46C7A3, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPickN<CCam*, 0>, void(CCam*)> onProcessingCam;
+    plugin::patch::Nop(0x483DB6, 90);
 #endif
+
     onProcessingCam.before += [](CCam* cam) {
-        if (cam->m_nCamMode > LAST_CAM_MODE) {
-            classicAxis.previousSource = cam->m_vecSource;
-            classicAxis.previousFront = cam->m_vecFront;
-            classicAxis.previousUp = cam->m_vecUp;
-        }
-    };
-
-    onProcessingCam.after += [](CCam* cam) {
-        if (cam->m_nCamMode > LAST_CAM_MODE) {
-            cam->m_vecSource = classicAxis.previousSource;
-            cam->m_vecFront = classicAxis.previousFront;
-            cam->m_vecUp = classicAxis.previousUp;
-        }
-
         CVector target = {};
         float targetOrient = 0.0f;
         CEntity* e = cam->m_pCamTargetEntity;
-
-        if (!e)
-            return;
-
         target = e->GetPosition();
 
 #ifdef GTA3
@@ -229,8 +214,7 @@ ClassicAxis::ClassicAxis() {
         else
             targetOrient = CGeneral::GetATanOfXY(mat.at.x, mat.at.y);
 
-        char mode = cam->m_nCamMode;
-        switch (mode) {
+        switch (cam->m_nCamMode) {
         case MODE_AIMWEAPON:
             CamNew->Process_AimWeapon(target, targetOrient, 0.0f, 0.0f);
             break;
@@ -473,9 +457,6 @@ void ClassicAxis::Clear() {
     if (!CamNew)
         CamNew = std::make_shared<CCamNew>();
 
-    previousSource = CamNew->cam->m_vecSource;
-    previousFront = CamNew->cam->m_vecFront;
-    previousUp = CamNew->cam->m_vecUp;
     previousCamMode = CamNew->cam->m_nCamMode;
     previousHorAngle = CamNew->cam->m_fHorizontalAngle;
     previousVerAngle = CamNew->cam->m_fVerticalAngle;

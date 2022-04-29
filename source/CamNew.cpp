@@ -248,12 +248,11 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     if (e->m_bHasLockOnTarget && !cam->m_bLookingBehind && p) {
         CVector target = p->GetPosition();
         CVector targetDiff = (cam->m_vecSource - target);
-        float f = tan(cam->m_fFOV * 0.5f * 0.017453292);
-        float b = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5 + TheCamera.m_f3rdPersonCHairMultX - 0.5) * f);
-        cam->m_fHorizontalAngle = e->m_fRotationCur + (M_PI * 0.5f) + b;
-
-        float a = CGeneral::GetATanOfXY(1.0f, f * ((0.5 - TheCamera.m_f3rdPersonCHairMultY + 0.5 - TheCamera.m_f3rdPersonCHairMultY) * (1.0 / GetAspectRatio())));
-        cam->m_fVerticalAngle = a - (M_PI * 0.05f);
+        float viewPlaneHeight = tan(DegToRad(cam->m_fFOV) * 0.5f);
+        float horShift = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5f + TheCamera.m_f3rdPersonCHairMultX - 0.5f) * viewPlaneHeight);
+        float verShift = CGeneral::GetATanOfXY(1.0f, viewPlaneHeight * ((0.5f - TheCamera.m_f3rdPersonCHairMultY + 0.5f - TheCamera.m_f3rdPersonCHairMultY) * (1.0f / GetAspectRatio())));
+        cam->m_fHorizontalAngle = e->m_fRotationCur + (M_PI * 0.5f) + horShift;
+        cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(targetDiff), -targetDiff.z) - verShift;
         lockMovement = true;
     }
 
