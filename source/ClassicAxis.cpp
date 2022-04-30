@@ -13,7 +13,6 @@
 #include "CAnimManager.h"
 #include "CSprite.h"
 #include "CWeaponEffects.h"
-
 #include "ClassicAxis.h"
 #include "Utility.h"
 #include "CamNew.h"
@@ -410,6 +409,9 @@ ClassicAxis::ClassicAxis() {
             (ped->m_pPointGunAt && !ped->m_pPointGunAt->GetIsOnScreenComplex()))
             ped->ClearWeaponTarget();
     };
+
+    // Minigun cannon rotation fix
+    plugin::patch::Nop(0x537454, 7);
 }
 
 void ClassicAxis::RotatePlayer(CPed* ped, float angle, bool smooth) {
@@ -837,8 +839,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
             point = false;
         }
 
-        if (point)
+        if (point) {
             playa->SetPointGunAt(NULL);
+        }
 
         wasPointing = true;
 
