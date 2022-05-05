@@ -44,10 +44,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     if (!cam)
         return;
 
-    CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
-
-    if (e->m_nType != ENTITY_TYPE_PED)
+    if (cam->m_pCamTargetEntity->m_nType != ENTITY_TYPE_PED)
         return;
+
+    CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
 
     Process_FOVLerp();
 

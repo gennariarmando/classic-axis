@@ -305,9 +305,6 @@ ClassicAxis::ClassicAxis() {
         if (ped != FindPlayerPed())
             return;
 
-        if (ped->m_ePedState == ePedState::PEDSTATE_AIMGUN || ped->m_ePedState == PEDSTATE_ATTACK)
-            return;
-
         if (!classicAxis.isAiming)
             return ped->ProcessWeaponSwitch(pad);
     };
@@ -410,8 +407,10 @@ ClassicAxis::ClassicAxis() {
             ped->ClearWeaponTarget();
     };
 
+#ifdef GTAVC
     // Minigun cannon rotation fix
     plugin::patch::Nop(0x537454, 7);
+#endif
 }
 
 void ClassicAxis::RotatePlayer(CPed* ped, float angle, bool smooth) {
@@ -717,14 +716,7 @@ void ClassicAxis::ClearWeaponTarget(CPlayerPed* ped) {
     gCrossHair.ClearCrossHair();
 }
 
-void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
-    CPlayerPed* playa = FindPlayerPed();
-    if (!playa)
-        return;
-
-    if (playa != ped)
-        return;
-
+void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     CPad* pad = CPad::GetPad(0);
     CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
     short& mode = cam.m_nCamMode;

@@ -36,7 +36,7 @@ public:
     void DrawAutoAimTarget();
     void DrawTriangleForMouseRecruitPed();
     void ClearWeaponTarget(CPlayerPed* ped);
-    void ProcessPlayerPedControl(CPed* ped);
+    void ProcessPlayerPedControl(CPlayerPed* ped);
     float Find3rdPersonQuickAimPitch(float y);
     void Find3rdPersonMouseTarget(CPlayerPed* ped);
 };
