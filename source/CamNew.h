@@ -23,6 +23,8 @@ public:
     bool cameraInput;
     std::vector<CEntity*> vecEntities;
     float previousPedZoomIndicator;
+    float fovLerp;
+    bool doFovChanges;
 
 public:
     CCamNew();
@@ -31,6 +33,7 @@ public:
     void Process_AimWeapon(CVector const&, float targetOrient, float, float);
     void Process_AvoidCollisions(float length);
     void GetVectorsReadyForRW();
+    void Process_FOVLerp();
 };
 
 extern std::shared_ptr<CCamNew> CamNew;

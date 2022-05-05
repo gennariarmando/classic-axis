@@ -174,7 +174,7 @@ ClassicAxis::ClassicAxis() {
     onStartingTransition.after += [](CCam* cam, short mode) {
         if (mode == MODE_AIMWEAPON || mode == 4) {
             if (classicAxis.switchTransitionSpeed) {
-                const int transitionDuration = 550;
+                const int transitionDuration = 500;
 
                 TheCamera.m_nTransitionDuration = transitionDuration;
 #ifdef GTAVC
@@ -222,7 +222,7 @@ ClassicAxis::ClassicAxis() {
 
     auto camControl = [](int, int) {
         TheCamera.m_bUseMouse3rdPerson = true;
-        FrontEndMenuManager.m_ControlMethod = 0;
+        FrontEndMenuManager.m_nControlMethod = 0;
         TheCamera.m_f3rdPersonCHairMultX = classicAxis.settings.cameraCrosshairMultX;
         TheCamera.m_f3rdPersonCHairMultY = classicAxis.settings.cameraCrosshairMultY;
 #ifdef GTAVC
@@ -686,7 +686,7 @@ void ClassicAxis::DrawTriangleForMouseRecruitPed() {
     CPlayerPed* playa = FindPlayerPed();
 
     if (playa) {
-        if (thirdPersonMouseTarget) {
+        if (thirdPersonMouseTarget && playa->OurPedCanSeeThisOne(thirdPersonMouseTarget, true)) {
             RwV3d in;
             RwV3d out;
             float w, h;
@@ -754,8 +754,8 @@ void ClassicAxis::ProcessPlayerPedControl(CPed* ped) {
         }
 
         CEntity* p = playa->m_pPointGunAt;
-        float mouseX = pad->NewMouseControllerState.X;
-        float mouseY = pad->NewMouseControllerState.Y;
+        float mouseX = pad->NewMouseControllerState.x;
+        float mouseY = pad->NewMouseControllerState.y;
         bool disableAutoAim = !pXboxPad->HasPadInHands() && !settings.forceAutoAim;
 
         if (!disableAutoAim) {

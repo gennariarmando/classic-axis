@@ -15,6 +15,10 @@
 
 using namespace plugin;
 
+const float minFOV = 50.0f;
+const float maxFOV = 70.0f;
+const float wepMinRange = 70.0f;
+
 #ifdef GTA3
 CColPoint* gaTempSphereColPoints = (CColPoint*)0x6E64C0;
 #else
@@ -28,6 +32,8 @@ CCamNew::CCamNew() {
     cameraInput = false;
     vecEntities.resize(5);
     previousPedZoomIndicator = 0.0f;
+    fovLerp = maxFOV;
+    doFovChanges = false;
 }
 
 CCamNew::~CCamNew() {
@@ -43,7 +49,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     if (e->m_nType != ENTITY_TYPE_PED)
         return;
 
-    cam->m_fFOV = 70.0f;
+    Process_FOVLerp();
 
     const float minDist = 2.0f;
 #ifdef GTA3
@@ -102,8 +108,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
         lockMovement = true;
     float lookLeftRight = -pad->LookAroundLeftRight();
     float lookUpDown = pad->LookAroundUpDown();
-    float mouseX = pad->NewMouseControllerState.X;
-    float mouseY = pad->NewMouseControllerState.Y;
+    float mouseX = pad->NewMouseControllerState.x;
+    float mouseY = pad->NewMouseControllerState.y;
     bool mouseInput = false;
 
     if (mouseX != 0.0f || mouseY != 0.0f) {
@@ -199,27 +205,21 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     if (cam->m_pCamTargetEntity->m_nType != ENTITY_TYPE_PED)
         return;
 
-    CPlayerPed* e = static_cast<CPlayerPed*>(cam->m_pCamTargetEntity);
+    doFovChanges = true;
+    Process_FOVLerp();
 
-    cam->m_fFOV = 70.0f;
+    CPlayerPed* e = static_cast<CPlayerPed*>(cam->m_pCamTargetEntity);
 
     const float maxDist = 2.7f;
     const float heightOffset = 0.25f;
-
-    CVector aimOffset = CVector(0.52f, 0.0f, 0.55f);
-
     float length = maxDist;
-    if (!classicAxis.settings.lcsAimingCoords) {
+
+    CVector aimOffset;
+    
+    if (classicAxis.settings.lcsAimingCoords)
+        aimOffset = CVector(0.52f, 0.0f, 0.55f);
+    else
         aimOffset = CVector(0.25f, 0.0f, 0.5f);
-
-        const eWeaponType weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
-        CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
-
-        if (!info->m_bCanAimWithArm && info->m_bCanAim) {
-            length -= 0.5f;
-            aimOffset.z += 0.025f;
-        }
-    }
 
 #ifdef GTA3
     CMatrix& mat = e->m_matrix;
@@ -270,8 +270,8 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         lockMovement = true;
     float lookLeftRight = -pad->LookAroundLeftRight();
     float lookUpDown = pad->LookAroundUpDown();
-    float mouseX = pad->NewMouseControllerState.X;
-    float mouseY = pad->NewMouseControllerState.Y;
+    float mouseX = pad->NewMouseControllerState.x;
+    float mouseY = pad->NewMouseControllerState.y;
     bool mouseInput = false;
 
     if (mouseX != 0.0f || mouseY != 0.0f) {
@@ -412,4 +412,26 @@ void CCamNew::GetVectorsReadyForRW() {
     right = CrossProduct(cam->m_vecFront, cam->m_vecUp);
     right.Normalise();
     cam->m_vecUp = CrossProduct(right, cam->m_vecFront);
+}
+
+void CCamNew::Process_FOVLerp() {
+    CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
+    const eWeaponType weaponType = e->m_aWeapons[e->m_nCurrentWeapon].m_eWeaponType;
+    CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+    bool changeFov = true;
+    if (TheCamera.m_nTransitionState == 0) {
+#ifdef GTAVC
+        if (weaponType == WEAPONTYPE_MINIGUN)
+            changeFov = false;
+#endif
+        if (changeFov && info && (!info->m_bCanAimWithArm && info->m_bCanAim && info->m_fRange >= wepMinRange) && doFovChanges) {
+            fovLerp = interpF(fovLerp, minFOV, 0.1f * CTimer::ms_fTimeStep);
+        }
+        else {
+            fovLerp = interpF(fovLerp, maxFOV, 0.1f * CTimer::ms_fTimeStep);
+        }
+    }
+
+    cam->m_fFOV = fovLerp;
+    doFovChanges = false;
 }
