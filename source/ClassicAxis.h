@@ -23,6 +23,11 @@ public:
     short previousCamMode;
     bool switchTransitionSpeed;
 
+#ifdef GTA3
+    bool weaponInfoSet;
+    class CWeaponInfo weaponInfo[WEAPONTYPE_HELICANNON + 1];
+#endif
+
 public:
     ClassicAxis();
     void RotatePlayer(CPed* ped, float angle, bool smooth);
@@ -39,6 +44,11 @@ public:
     void ProcessPlayerPedControl(CPlayerPed* ped);
     float Find3rdPersonQuickAimPitch(float y);
     void Find3rdPersonMouseTarget(CPlayerPed* ped);
+
+#ifdef GTA3
+    void SetDuck(CPlayerPed* ped);
+    void ClearDuck(CPlayerPed* ped);
+#endif
 };
 
 extern ClassicAxis classicAxis;
