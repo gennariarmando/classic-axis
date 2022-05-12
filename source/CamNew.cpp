@@ -216,10 +216,10 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     CVector aimOffset;
     
-    if (classicAxis.settings.lcsAimingCoords)
-        aimOffset = CVector(0.52f, 0.0f, 0.55f);
+    if (classicAxis.settings.storiesAimingCoords)
+        aimOffset = CVector(0.55f, 0.0f, 0.0f);
     else
-        aimOffset = CVector(0.25f, 0.0f, 0.5f);
+        aimOffset = CVector(0.2f, 0.0f, 0.0f);
 
 #ifdef GTA3
     CMatrix& mat = e->m_matrix;
@@ -239,6 +239,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         targetCoords = target;
     }
 
+    targetCoords.z += cam->m_fSyphonModeTargetZOffSet + 0.05f;
     targetCoords.z += heightOffset;
 
     CVector dist = cam->m_vecSource - targetCoords;

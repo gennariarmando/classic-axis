@@ -12,7 +12,7 @@ void Settings::Read() {
     lockOnTargetType = config["LockOnTargetType"].asInt(TARGET_SA);
     showTriangleForMouseRecruit = config["ShowTriangleForMouseRecruit"].asBool(true);
     altKeyWalk = config["EnableLAltKeyWalk"].asBool(true);
-    lcsAimingCoords = config["LCSAimingCoords"].asBool(false);
+    storiesAimingCoords = config["StoriesAimingCoords"].asBool(false);
     cameraCrosshairMultX = config["CameraCrosshairMultX"].asFloat(0.53f);
     cameraCrosshairMultY = config["CameraCrosshairMultY"].asFloat(0.4f);
 }

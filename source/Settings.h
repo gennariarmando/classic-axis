@@ -12,7 +12,7 @@ public:
     int lockOnTargetType;
     bool showTriangleForMouseRecruit;
     bool altKeyWalk;
-    bool lcsAimingCoords;
+    bool storiesAimingCoords;
     float cameraCrosshairMultX;
     float cameraCrosshairMultY;
 
