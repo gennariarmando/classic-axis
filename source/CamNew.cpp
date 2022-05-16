@@ -34,6 +34,7 @@ CCamNew::CCamNew() {
     previousPedZoomIndicator = 0.0f;
     fovLerp = maxFOV;
     doFovChanges = false;
+    duckOffset = 0.0f;
 }
 
 CCamNew::~CCamNew() {
@@ -61,8 +62,12 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     const bool usingController = classicAxis.pXboxPad->HasPadInHands();
 
     targetCoords = target;
+
+    Process_CrouchOffset(duckOffset);
+
     targetCoords.z += cam->m_fSyphonModeTargetZOffSet;
     targetCoords.z += heightOffset;
+    targetCoords.z += duckOffset;
 
     CVector dist = cam->m_vecSource - targetCoords;
 
@@ -226,7 +231,9 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 #else
     CMatrix& mat = e->m_placement;
 #endif
-    targetCoords = TransformFromObjectSpace(mat, e->GetHeading(), aimOffset);
+
+    CVector vec = TransformFromObjectSpace(mat, e->GetHeading(), aimOffset);
+    targetCoords = vec;
 
     CEntity* entity = NULL;
     CColPoint colPoint;
@@ -236,11 +243,15 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         , false
 #endif
     )) {
-        targetCoords = target;
+        targetCoords.x = target.x;
+        targetCoords.y = target.y;
     }
+
+    Process_CrouchOffset(duckOffset);
 
     targetCoords.z += cam->m_fSyphonModeTargetZOffSet + 0.05f;
     targetCoords.z += heightOffset;
+    targetCoords.z += duckOffset;
 
     CVector dist = cam->m_vecSource - targetCoords;
 
@@ -397,6 +408,18 @@ void CCamNew::Process_AvoidCollisions(float length) {
             }
         }
     }
+}
+
+void CCamNew::Process_CrouchOffset(float& offset) {
+    CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
+
+    float end = 0.0f;
+    if (e->m_nPedFlags.bIsDucking) {
+        end = -0.5f;
+        end += ((maxFOV - cam->m_fFOV) / minFOV * (maxFOV)) / 100.0f;
+    }
+
+    offset = interpF(offset, end, 0.1f * CTimer::ms_fTimeStep);
 }
 
 void CCamNew::GetVectorsReadyForRW() {

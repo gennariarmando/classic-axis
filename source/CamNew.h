@@ -25,6 +25,7 @@ public:
     float previousPedZoomIndicator;
     float fovLerp;
     bool doFovChanges;
+    float duckOffset;
 
 public:
     CCamNew();
@@ -32,6 +33,7 @@ public:
     void Process_FollowPed(CVector const&, float targetOrient, float, float);
     void Process_AimWeapon(CVector const&, float targetOrient, float, float);
     void Process_AvoidCollisions(float length);
+    void Process_CrouchOffset(float &offset);
     void GetVectorsReadyForRW();
     void Process_FOVLerp();
 };

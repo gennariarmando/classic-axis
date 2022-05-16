@@ -35,6 +35,9 @@ public:
     bool IsAbleToAim(CPed* ped);
     bool IsType1stPerson(CPed* ped);
     bool IsWeaponPossiblyCompatible(CPed* ped);
+#ifdef GTA3
+    bool CanDuckWithThisWeapon(eWeaponType weapon);
+#endif
     bool IsTypeMelee(CPed* ped);
     bool IsTypeTwoHanded(CPed* ped);
     void DrawCrosshair();

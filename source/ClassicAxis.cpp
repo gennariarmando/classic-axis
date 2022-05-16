@@ -542,6 +542,20 @@ bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
     return (info->m_bCanAim || info->m_bCanAimWithArm) && !info->m_bThrow && !info->m_b1stPerson;
 }
 
+#ifdef GTA3
+bool ClassicAxis::CanDuckWithThisWeapon(eWeaponType weapon) {
+    switch (weapon) {
+    case WEAPONTYPE_COLT45:
+    case WEAPONTYPE_UZI:
+    case WEAPONTYPE_AK47:
+    case WEAPONTYPE_M16:
+        return true;
+    default:
+        return false;
+    }
+}
+#endif
+
 bool ClassicAxis::IsTypeMelee(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 
@@ -764,7 +778,6 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
     const bool hasPadInHands = pXboxPad->HasPadInHands();
 
-
     if (pad->NewKeyState.lmenu && settings.altKeyWalk) {
         playa->m_fMoveSpeed = 0.0f;
     }
@@ -924,6 +937,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 
     if (!isAiming) {
         if (wasPointing) {
+            playa->ClearPointGunAt();
+            playa->ClearWeaponTarget();
+
             if (wasCrouching) {
                 if (currentWeapon.m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO && currentWeapon.m_eWeaponState != WEAPONSTATE_RELOADING &&
                     IsAbleToAim(playa)) {
@@ -937,46 +953,43 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 #endif
                 }
                 wasCrouching = false;
-            }
-            if (playa->m_nPedFlags.bIsPointingGunAt || playa->m_nPedFlags.bIsAimingGun) {
-                playa->ClearPointGunAt();
-                playa->ClearWeaponTarget();
+
+#ifdef GTA3
+                playa->RestorePreviousState();
+#endif
             }
 
-            if (mode != previousCamMode && TheCamera.m_nTransitionState == 0) {
+            if (mode != previousCamMode) {
                 TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
                 TheCamera.m_bLookingAtPlayer = true;
                 classicAxis.switchTransitionSpeed = true;
                 classicAxis.previousHorAngle = cam.m_fHorizontalAngle;
                 classicAxis.previousVerAngle = cam.m_fVerticalAngle;
                 previousCamMode = mode;
-                wasPointing = false;
             }
+
+            wasPointing = false;
         }
     }
-
+    
     if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa) && mode == MODE_FOLLOW_PED))) {
         RotatePlayer(playa, front, true);
     }
-
+ 
 #ifdef GTA3
-    if (!pad->DisablePlayerControls && mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) {
+    if (!pad->DisablePlayerControls && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) && IsAbleToAim(playa)) {
         const char key = 'C';
         bool duckJustDown = pad->NewKeyState.standardKeys[key] && !pad->OldKeyState.standardKeys[key];
 
         if (hasPadInHands)
             duckJustDown |= pad->NewState.ShockButtonL && !pad->OldState.ShockButtonL;
 
-        if (!playa->m_nPedFlags.bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT && playa->m_ePedState != PEDSTATE_JUMP && playa->m_ePedState != PEDSTATE_FALL) {
+        if (!playa->m_nPedFlags.bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT) {
             playa->m_nPedFlags.bCrouchWhenShooting = true;
             SetDuck(playa);
         }
-        else if (playa->m_nPedFlags.bIsDucking && (duckJustDown || playa->m_eMoveState == PEDMOVE_SPRINT || pad->GetSprint() || pad->JumpJustDown() || pad->ExitVehicleJustDown() || (pad->GetWeapon() && !IsWeaponPossiblyCompatible(playa)))) {
+        else if (playa->m_nPedFlags.bIsDucking && (duckJustDown || playa->m_eMoveState == PEDMOVE_SPRINT || pad->GetSprint() || pad->JumpJustDown() || pad->ExitVehicleJustDown() || (pad->GetWeapon() && !CanDuckWithThisWeapon(weaponType)))) {
             ClearDuck(playa);
-
-            if (!isAiming)
-                playa->ClearPointGunAt();
-            wasCrouching = false;
         }
 
         if (playa->m_nPedFlags.bIsDucking && !isAiming && (!pad->GetWeapon() || playa->m_ePedState != PEDSTATE_ATTACK || !playa->m_nPedFlags.bIsAttacking)) {
@@ -998,6 +1011,8 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 
         info->m_fAnimFrameFire = clamp(info->m_fAnimFrameFire, info->m_fAnimFrameFire, 14.0f / 30.0f);
         info->m_fAnim2FrameFire = info->m_fAnimFrameFire;
+
+        info->m_bCanAimWithArm = false;
     }
     else {
         info->m_nAnimToPlay = weaponInfo[weaponType].m_nAnimToPlay;
@@ -1007,6 +1022,8 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 
         info->m_fAnimFrameFire = weaponInfo[weaponType].m_fAnimFrameFire;
         info->m_fAnim2FrameFire = weaponInfo[weaponType].m_fAnim2FrameFire;
+
+        info->m_bCanAimWithArm = weaponInfo[weaponType].m_bCanAimWithArm;
     }
 #endif
 }
@@ -1085,6 +1102,10 @@ void ClassicAxis::ClearDuck(CPlayerPed* ped) {
         animAssoc = RpAnimBlendClumpGetAssociation(ped->m_pRwClump, ANIM_MAN_DUCK_LOW);
     }
 
+    if (!animAssoc) {
+        animAssoc = RpAnimBlendClumpGetAssociation(ped->m_pRwClump, ANIM_MAN_RBLOCK_CSHOOT);
+    }
+
     if (animAssoc) {
         animAssoc->m_nFlags |= ASSOC_DELETEFADEDOUT;
         animAssoc->m_fBlendDelta = -4.0f;
@@ -1093,5 +1114,6 @@ void ClassicAxis::ClearDuck(CPlayerPed* ped) {
 
     ped->m_nDuckTimer = 0;
     ped->m_nPedFlags.bCrouchWhenShooting = false;
+    ped->RestorePreviousState();
 }
 #endif
