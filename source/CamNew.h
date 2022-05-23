@@ -38,4 +38,7 @@ public:
     void Process_FOVLerp();
 };
 
+
+extern const float minFOV;
+extern const float maxFOV;
 extern std::shared_ptr<CCamNew> CamNew;

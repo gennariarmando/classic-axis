@@ -24,6 +24,7 @@ public:
     bool switchTransitionSpeed;
 
 #ifdef GTA3
+    bool wantsToResetWeaponInfo;
     bool weaponInfoSet;
     class CWeaponInfo weaponInfo[WEAPONTYPE_HELICANNON + 1];
 #endif
@@ -51,6 +52,8 @@ public:
 #ifdef GTA3
     void SetDuck(CPlayerPed* ped);
     void ClearDuck(CPlayerPed* ped);
+    void AdjustWeaponInfoForCrouch(CPlayerPed* ped);
+    void ResetWeaponInfo(CPlayerPed* ped);
 #endif
 };
 
