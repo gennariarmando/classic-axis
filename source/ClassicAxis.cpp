@@ -16,7 +16,6 @@
 #include "ClassicAxis.h"
 #include "Utility.h"
 #include "CamNew.h"
-#include "CDraw.h"
 
 ClassicAxis classicAxis;
 
@@ -1066,7 +1065,7 @@ float ClassicAxis::Find3rdPersonQuickAimPitch(float y) {
     return -(atan2(
         tan(cam->m_fFOV * 0.5 * 0.01403292f)
         * (0.5 - TheCamera.m_f3rdPersonCHairMultY + 0.5 - TheCamera.m_f3rdPersonCHairMultY)
-        * (1.0 / CDraw::ms_fAspectRatio),
+        * (1.0 / GetAspectRatio()),
         1.0)
         + cam->m_fVerticalAngle);
 }
