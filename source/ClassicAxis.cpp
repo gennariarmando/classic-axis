@@ -435,7 +435,8 @@ ClassicAxis::ClassicAxis() {
 
 #ifdef GTA3
     // Stories like aiming arm
-    //plugin::patch::SetFloat(0x5FA008, 0.0f);
+    if (settings.storiesPointingArm)
+        plugin::patch::SetFloat(0x5FA008, 0.0f);
 
     // Fix shooting while duck
     plugin::patch::Nop(0x4E67A4, 2);
@@ -450,7 +451,8 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::Set<BYTE>(0x5D154C + 1, 0x85);
 
     // Stories like aiming arm
-    //plugin::patch::SetFloat(0x694720, 0.0f);
+    if (settings.storiesPointingArm)
+        plugin::patch::SetFloat(0x694720, 0.0f);
 #endif
 
     // Fix aiming direction
@@ -913,6 +915,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         playa->m_fFPSMoveHeading = height;
         playa->m_fFPSMoveHeading = clamp(playa->m_fFPSMoveHeading, -DegToRad(45.0f), DegToRad(45.0f));
 
+        if (settings.storiesPointingArm && info->m_bCanAimWithArm)
+            playa->m_fFPSMoveHeading -= DegToRad(8.0f);
+
         float torsoPitch = 0.0f;
         if (!info->m_bCanAimWithArm || playa->m_nPedFlags.bIsDucking) {
             torsoPitch = playa->m_fFPSMoveHeading;
@@ -927,8 +932,10 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 
 #ifdef GTA3
         CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, info->m_nAnimToPlay);
+        CAnimBlendAssociation* animRel = NULL;
 #else
         CAnimBlendAssociation* anim = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, ANIM_UNARMED_PUNCHR);
+        CAnimBlendAssociation* animRel = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, ANIM_UNARMED_FIGHTPPUNCH);
 #endif
         bool point = true;
 
@@ -946,6 +953,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
             playa->ProcessWeaponSwitch(pad);
             point = false;
         }
+
+        if (animRel)
+            point = true;
 
         if (point) {
             if (playa->m_ePedState != PEDSTATE_AIMGUN) {

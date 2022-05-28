@@ -111,8 +111,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     CPad* pad = CPad::GetPad(0);
     if (pad->DisablePlayerControls)
         lockMovement = true;
-    float lookLeftRight = -pad->LookAroundLeftRight();
-    float lookUpDown = pad->LookAroundUpDown();
+    float lookLeftRight = -pad->NewState.RightStickX;//-pad->LookAroundLeftRight();
+    float lookUpDown = -pad->NewState.RightStickY; //pad->LookAroundUpDown();
     float mouseX = pad->NewMouseControllerState.x;
     float mouseY = pad->NewMouseControllerState.y;
     bool mouseInput = false;
@@ -125,6 +125,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     float betaOffset = lookLeftRight * 0.01f * (1.0f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
     float alphaOffset = lookUpDown * 0.01f * (0.6f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
+    betaOffset *= classicAxis.settings.rightAnalogStickSensitivityX;
+    alphaOffset *= classicAxis.settings.rightAnalogStickSensitivityY;
 
     if (mouseInput) {
         betaOffset = lookLeftRight * TheCamera.m_fMouseAccelHorzntal * cam->m_fFOV / 80.0f;
@@ -280,8 +282,8 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     CPad* pad = CPad::GetPad(0);
     if (pad->DisablePlayerControls)
         lockMovement = true;
-    float lookLeftRight = -pad->LookAroundLeftRight();
-    float lookUpDown = pad->LookAroundUpDown();
+    float lookLeftRight = -pad->NewState.RightStickX;//-pad->LookAroundLeftRight();
+    float lookUpDown = -pad->NewState.RightStickY; //pad->LookAroundUpDown();
     float mouseX = pad->NewMouseControllerState.x;
     float mouseY = pad->NewMouseControllerState.y;
     bool mouseInput = false;
@@ -294,6 +296,8 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     float betaOffset = lookLeftRight * 0.01f * (1.0f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
     float alphaOffset = lookUpDown * 0.01f * (0.6f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
+    betaOffset *= classicAxis.settings.rightAnalogStickSensitivityX;
+    alphaOffset *= classicAxis.settings.rightAnalogStickSensitivityY;
 
     if (mouseInput) {
         betaOffset = lookLeftRight * TheCamera.m_fMouseAccelHorzntal * cam->m_fFOV / 80.0f;

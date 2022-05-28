@@ -15,6 +15,9 @@ public:
     bool storiesAimingCoords;
     float cameraCrosshairMultX;
     float cameraCrosshairMultY;
+    bool storiesPointingArm;
+    float rightAnalogStickSensitivityX;
+    float rightAnalogStickSensitivityY;
 
 public:
     void Read();
