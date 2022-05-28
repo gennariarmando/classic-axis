@@ -82,7 +82,6 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     }
 
     float length = dist.Magnitude();
-
     if (previousPedZoomIndicator != maxDist) {
         dist *= maxDist / length;
         previousPedZoomIndicator = maxDist;
@@ -100,9 +99,11 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     bool lockMovement = false;
     if (usingController && TheCamera.m_nTransitionState == 0) {
-        cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
-        cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(dist), -dist.z);
+        if (cam->m_fVerticalAngle > -DegToRad(85.0f))
+            cam->m_fHorizontalAngle = CGeneral::GetATanOfXY(-dist.x, -dist.y);
+        cam->m_fVerticalAngle = -CGeneral::GetATanOfXY(Magnitude2d(dist), dist.z);
     }
+
     while (cam->m_fHorizontalAngle >= M_PI) cam->m_fHorizontalAngle -= 2.0f * M_PI;
     while (cam->m_fHorizontalAngle < -M_PI) cam->m_fHorizontalAngle += 2.0f * M_PI;
     while (cam->m_fVerticalAngle >= M_PI) cam->m_fVerticalAngle -= 2.0f * M_PI;
@@ -160,10 +161,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     if (cam->m_bRotating) {
         WellBufferMe(cam->m_fTargetBeta, &cam->m_fHorizontalAngle, &cam->m_fBetaSpeed, 0.1f, 0.06f, true);
-        float DeltaBeta = cam->m_fTargetBeta - cam->m_fHorizontalAngle;
-        while (DeltaBeta >= M_PI) DeltaBeta -= 2 * M_PI;
-        while (DeltaBeta < -M_PI) DeltaBeta += 2 * M_PI;
-        if (abs(DeltaBeta) < 0.06f)
+        float deltaBeta = cam->m_fTargetBeta - cam->m_fHorizontalAngle;
+        while (deltaBeta >= M_PI) deltaBeta -= 2 * M_PI;
+        while (deltaBeta < -M_PI) deltaBeta += 2 * M_PI;
+        if (abs(deltaBeta) < 0.06f)
             cam->m_bRotating = false;
     }
 
