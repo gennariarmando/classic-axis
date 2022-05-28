@@ -573,6 +573,15 @@ bool ClassicAxis::IsType1stPerson(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
+    switch (weaponType) {
+    case WEAPONTYPE_SNIPERRIFLE:
+    case WEAPONTYPE_ROCKETLAUNCHER:
+#ifdef GTAVC
+    case WEAPONTYPE_LASERSCOPE:
+#endif
+        return true;
+    };
+
     return !info->m_bCanAim && !info->m_bCanAimWithArm && info->m_b1stPerson;
 }
 
