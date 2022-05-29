@@ -682,7 +682,6 @@ void ClassicAxis::DrawCrosshair() {
         char mode = cam.m_nCamMode;
         float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
         float y = RsGlobal.maximumHeight * TheCamera.m_f3rdPersonCHairMultY;
-        y -= ScaleY(2.0f);
         CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
         eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
 
@@ -693,7 +692,6 @@ void ClassicAxis::DrawCrosshair() {
                     if (!playa->m_bHasLockOnTarget && classicAxis.IsWeaponPossiblyCompatible(playa))
                         crosshair->Draw(CRect(x - ScaleX(14.0f), y - ScaleY(14.0f), x + ScaleX(14.0f), y + ScaleY(14.0f)), CRGBA(255, 255, 255, 255));
                 }
-
             }
         }
     }
@@ -844,6 +842,11 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         playa->m_fMoveSpeed = 0.0f;
     }
 
+    //if (playa->m_nFlags.bIsTouchingWater && mod_Buoyancy.m_fWaterlevel > playa->GetPosition().z &&
+    //    Magnitude2d(playa->m_vecMoveSpeed) < 0.01f && playa->m_ePedState != PEDSTATE_DEAD && playa->m_ePedState != PEDSTATE_WASTED) {
+    //    RotatePlayer(playa, front, true);
+    //}
+
     isAiming = false;
     ignoreRotation = false;
 
@@ -908,7 +911,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 #ifdef GTA3
         playa->SetLookFlag(front, true);
 #else
-        playa->SetLookFlag(front, false, false);
+        playa->SetLookFlag(front, true, true);
 #endif
         playa->SetAimFlag(front);
 
