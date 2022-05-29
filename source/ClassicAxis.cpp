@@ -443,6 +443,9 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::Nop(0x4E6808, 2);
 
     plugin::patch::Set<BYTE>(0x4E6C65, 0xEB);
+
+    // Fix fast reload
+    plugin::patch::Set<BYTE>(0x55C867, 0xEB);
 #else
     // Minigun cannon rotation fix
     plugin::patch::Nop(0x537454, 7);
@@ -949,10 +952,11 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
             point = false;
         }
 
-        if (pad->GetWeapon())
+        bool relState = (currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING && !CWorld::Players[CWorld::PlayerInFocus].m_bFastReload);
+        if (pad->GetWeapon() && currentWeapon.m_nAmmoInClip > 0)
             point = false;
 
-        if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING)
+        if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || relState)
             point = false;
 
         if (!currentWeapon.HasWeaponAmmoToBeUsed()) {
