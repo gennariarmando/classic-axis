@@ -453,6 +453,9 @@ ClassicAxis::ClassicAxis() {
     // Stories like aiming arm
     if (settings.storiesPointingArm)
         plugin::patch::SetFloat(0x694720, 0.0f);
+
+    // Fix fast reload
+    plugin::patch::Set<BYTE>(0x5D4B85, 0xEB);
 #endif
 
     // Fix aiming direction
