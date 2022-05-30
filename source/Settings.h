@@ -11,13 +11,16 @@ public:
     bool forceAutoAim;
     int lockOnTargetType;
     bool showTriangleForMouseRecruit;
-    bool altKeyWalk;
+    std::string walkKey;
     bool storiesAimingCoords;
     float cameraCrosshairMultX;
     float cameraCrosshairMultY;
     bool storiesPointingArm;
     float rightAnalogStickSensitivityX;
     float rightAnalogStickSensitivityY;
+#ifdef GTA3
+    std::string crouchKey;
+#endif
 
 public:
     void Read();

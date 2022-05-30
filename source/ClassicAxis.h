@@ -45,11 +45,15 @@ public:
     void DrawAutoAimTarget();
     void DrawTriangleForMouseRecruitPed();
     void ClearWeaponTarget(CPlayerPed* ped);
+    int StringToKey(std::string str);
+    bool GetKeyDown(int key, bool old = false);
+    bool WalkKeyDown();
     void ProcessPlayerPedControl(CPlayerPed* ped);
     float Find3rdPersonQuickAimPitch(float y);
     void Find3rdPersonMouseTarget(CPlayerPed* ped);
 
 #ifdef GTA3
+    bool DuckKeyDown();
     void SetDuck(CPlayerPed* ped);
     void ClearDuck(CPlayerPed* ped);
     void AdjustWeaponInfoForCrouch(CPlayerPed* ped);

@@ -833,6 +833,296 @@ void ClassicAxis::ClearWeaponTarget(CPlayerPed* ped) {
     gCrossHair.ClearCrossHair();
 }
 
+std::string controlKeysStrings[62] = {
+    "ESC",
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F12",
+    "INS",
+    "DEL",
+    "HOME",
+    "END",
+    "PGUP",
+    "PGDN",
+    "UP",
+    "DOWN",
+    "LEFT",
+    "RIGHT",
+    "DIVIDE",
+    "TIMES",
+    "PLUS",
+    "MINUS",
+    "PADDEL",
+    "PADEND",
+    "PADDOWN",
+    "PADPGDN",
+    "PADLEFT",
+    "PAD5",
+    "NUMLOCK",
+    "PADRIGHT",
+    "PADHOME",
+    "PADUP",
+    "PADPGUP",
+    "PADINS",
+    "PADENTER",
+    "SCROLL",
+    "PAUSE",
+    "BACKSP",
+    "TAB",
+    "CAPSLK",
+    "ENTER",
+    "LSHIFT",
+    "RSHIFT",
+    "SHIFT",
+    "LCTRL",
+    "RCTRL",
+    "LALT",
+    "RALT",
+    "LWIN",
+    "RWIN",
+    "APPS",
+    "NULL"
+};
+
+int ClassicAxis::StringToKey(std::string str) {
+    int key = str[0];
+
+    if (str[0] && str[1] != '\0') {
+        if (!str.compare("SPACE"))
+            return rsSPACE;
+
+        for (int i = 0; i < arraySize(controlKeysStrings); i++) {
+            if (!str.compare(controlKeysStrings[i])) {
+                key = i + rsESC;
+                break;
+            }
+        }
+    }
+
+    return key;
+}
+
+bool ClassicAxis::GetKeyDown(int key, bool old) {
+    CPad* pad = CPad::GetPad(0);
+    CKeyboardState* keyState = NULL;
+    
+    if (old)
+        keyState = &pad->OldKeyState;
+    else
+        keyState = &pad->NewKeyState;
+
+    if (key < 255) {
+        if (keyState->standardKeys[key])
+            return true;
+    }
+
+    for (int i = 0; i < 12; i++) {
+        if (i + rsF1 == key) {
+            if (keyState->FKeys[i])
+                return true;
+        }
+    }
+
+    switch (key) {
+    case rsESC:
+        if (keyState->esc)
+            return true;
+        break;
+    case rsINS:
+        if (keyState->insert)
+            return true;
+        break;
+    case rsDEL:
+        if (keyState->del)
+            return true;
+        break;
+    case rsHOME:
+        if (keyState->home)
+            return true;
+        break;
+    case rsEND:
+        if (keyState->end)
+            return true;
+        break;
+    case rsPGUP:
+        if (keyState->pgup)
+            return true;
+        break;
+    case rsPGDN:
+        if (keyState->pgdn)
+            return true;
+        break;
+    case rsUP:
+        if (keyState->up)
+            return true;
+        break;
+    case rsDOWN:
+        if (keyState->down)
+            return true;
+        break;
+    case rsLEFT:
+        if (keyState->left)
+            return true;
+        break;
+    case rsRIGHT:
+        if (keyState->right)
+            return true;
+        break;
+    case rsSCROLL:
+        if (keyState->scroll)
+            return true;
+        break;
+    case rsPAUSE:
+        if (keyState->pause)
+            return true;
+        break;
+    case rsNUMLOCK:
+        if (keyState->numlock)
+            return true;
+        break;
+    case rsDIVIDE:
+        if (keyState->div)
+            return true;
+        break;
+    case rsTIMES:
+        if (keyState->mul)
+            return true;
+        break;
+    case rsMINUS:
+        if (keyState->sub)
+            return true;
+        break;
+    case rsPLUS:
+        if (keyState->add)
+            return true;
+        break;
+    case rsPADENTER:
+        if (keyState->enter)
+            return true;
+        break;
+    case rsPADDEL:
+        if (keyState->decimal)
+            return true;
+        break;
+    case rsPADEND:
+        if (keyState->num1)
+            return true;
+        break;
+    case rsPADDOWN:
+        if (keyState->num2)
+            return true;
+        break;
+    case rsPADPGDN:
+        if (keyState->num3)
+            return true;
+        break;
+    case rsPADLEFT:
+        if (keyState->num4)
+            return true;
+        break;
+    case rsPAD5:
+        if (keyState->num5)
+            return true;
+        break;
+    case rsPADRIGHT:
+        if (keyState->num6)
+            return true;
+        break;
+    case rsPADHOME:
+        if (keyState->num7)
+            return true;
+        break;
+    case rsPADUP:
+        if (keyState->num8)
+            return true;
+        break;
+    case rsPADPGUP:
+        if (keyState->num9)
+            return true;
+        break;
+    case rsPADINS:
+        if (keyState->num0)
+            return true;
+        break;
+    case rsBACKSP:
+        if (keyState->back)
+            return true;
+        break;
+    case rsTAB:
+        if (keyState->tab)
+            return true;
+        break;
+    case rsCAPSLK:
+        if (keyState->capslock)
+            return true;
+        break;
+    case rsENTER:
+        if (keyState->extenter)
+            return true;
+        break;
+    case rsLSHIFT:
+        if (keyState->lshift)
+            return true;
+        break;
+    case rsSHIFT:
+        if (keyState->shift)
+            return true;
+        break;
+    case rsRSHIFT:
+        if (keyState->rshift)
+            return true;
+        break;
+    case rsLCTRL:
+        if (keyState->lctrl)
+            return true;
+        break;
+    case rsRCTRL:
+        if (keyState->rctrl)
+            return true;
+        break;
+    case rsLALT:
+        if (keyState->lmenu)
+            return true;
+        break;
+    case rsRALT:
+        if (keyState->rmenu)
+            return true;
+        break;
+    case rsLWIN:
+        if (keyState->lwin)
+            return true;
+        break;
+    case rsRWIN:
+        if (keyState->rwin)
+            return true;
+        break;
+    case rsAPPS:
+        if (keyState->apps)
+            return true;
+        break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
+bool ClassicAxis::WalkKeyDown() {
+    if (CPad::GetPad(0)->DisablePlayerControls)
+        return false;
+
+    return GetKeyDown(StringToKey(settings.walkKey));
+}
+
 void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     CPad* pad = CPad::GetPad(0);
     CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
@@ -844,7 +1134,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
     const bool hasPadInHands = pXboxPad->HasPadInHands();
 
-    if (pad->NewKeyState.lmenu && settings.altKeyWalk) {
+    if (WalkKeyDown()) {
         playa->m_fMoveSpeed = 0.0f;
     }
 
@@ -903,12 +1193,12 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
                     transitionDone = false;
 
                 if ((transitionDone && ((pXboxPad->HasPadInHands() &&
-                    (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 99 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f))) ||
+                    (pad->Mode == 4 ? pad->NewState.LeftShoulder2 < 254 : (pad->LookAroundLeftRight() || pad->LookAroundUpDown()))) || (abs(mouseX) > 1.0f || abs(mouseY) > 1.0f))) ||
                     diff.Magnitude() < 0.5f)
                     ClearWeaponTarget(playa);
             }
             else {
-                if (/*!pad->SecondaryFireJustDown() && */(pad->Mode == 4 ? pad->NewState.LeftShoulder2 >= 100 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
+                if (/*!pad->SecondaryFireJustDown() && */(pad->Mode == 4 ? pad->NewState.LeftShoulder2 >= 254 : pad->ShiftTargetLeftJustDown() || pad->ShiftTargetRightJustDown()))
                     playa->FindWeaponLockOnTarget();
             }
         }
@@ -1062,11 +1352,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
  
 #ifdef GTA3
     if (!pad->DisablePlayerControls && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) && IsAbleToAim(playa)) {
-        const char key = 'C';
-        bool duckJustDown = pad->NewKeyState.standardKeys[key] && !pad->OldKeyState.standardKeys[key];
-
-        if (hasPadInHands)
-            duckJustDown |= pad->NewState.ShockButtonL && !pad->OldState.ShockButtonL;
+        bool duckJustDown = DuckKeyDown();
 
         if (!playa->m_nPedFlags.bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT) {
             playa->m_nPedFlags.bCrouchWhenShooting = true;
@@ -1145,6 +1431,16 @@ void ClassicAxis::Find3rdPersonMouseTarget(CPlayerPed* ped) {
 }
 
 #ifdef GTA3
+bool ClassicAxis::DuckKeyDown() {
+    if (CPad::GetPad(0)->DisablePlayerControls)
+        return false;
+
+    if (classicAxis.pXboxPad->HasPadInHands())
+        return CPad::GetPad(0)->NewState.ShockButtonL && !CPad::GetPad(0)->OldState.ShockButtonL;
+
+    return GetKeyDown(StringToKey(settings.crouchKey)) && !GetKeyDown(StringToKey(settings.crouchKey), true);
+}
+
 void ClassicAxis::SetDuck(CPlayerPed* ped) {
     if (ped->m_nPedFlags.bIsDucking || CTimer::m_snTimeInMilliseconds <= ped->m_nDuckTimer) {
         if (CTimer::m_snTimeInMilliseconds + 60000 > ped->m_nDuckTimer)

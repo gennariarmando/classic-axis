@@ -10,6 +10,7 @@
 #define interpF(a, b, f) a = a + (f) * (b - a)
 #define clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 #define isNearlyEqualF(a, b, t) (fabs(a - b) <= t)
+#define arraySize(array) (sizeof(array) / sizeof(array[0]))
 
 static float DegToRad(float x) {
     return (x * M_PI / 180.0f);
