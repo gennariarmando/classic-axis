@@ -1248,6 +1248,10 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         if (pad->GetWeapon() && currentWeapon.m_nAmmoInClip > 0)
             point = false;
 
+        if (anim && pad->GetWeapon() && currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING && fastReload) {
+            anim->m_fCurrentTime = info->m_fAnimLoopEnd;
+        }
+
         if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || relState)
             point = false;
 
