@@ -1133,6 +1133,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     eWeaponType weaponType = currentWeapon.m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
     const bool hasPadInHands = pXboxPad->HasPadInHands();
+    bool fastReload = CWorld::Players[CWorld::PlayerInFocus].m_bFastReload;
 
     if (WalkKeyDown()) {
         playa->m_fMoveSpeed = 0.0f;
@@ -1150,7 +1151,8 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 #ifdef GTA3
         (!playa->m_nPedFlags.bIsDucking || CanDuckWithThisWeapon(weaponType)) &&
 #endif
-        pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && !IsType1stPerson(playa) && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON)) {
+        pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && !IsType1stPerson(playa) && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON)
+        && currentWeapon.HasWeaponAmmoToBeUsed()) {
         isAiming = true;
         if (mode != MODE_AIMWEAPON && playa->IsPedInControl() && TheCamera.m_nTransitionState == 0) {
             TheCamera.TakeControl(FindPlayerPed(), MODE_AIMWEAPON, 1, 0);
@@ -1242,17 +1244,12 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
             point = false;
         }
 
-        bool relState = (currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING && !CWorld::Players[CWorld::PlayerInFocus].m_bFastReload);
+        bool relState = (currentWeapon.m_eWeaponState == WEAPONSTATE_RELOADING && !fastReload);
         if (pad->GetWeapon() && currentWeapon.m_nAmmoInClip > 0)
             point = false;
 
         if (currentWeapon.m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO || relState)
             point = false;
-
-        if (!currentWeapon.HasWeaponAmmoToBeUsed()) {
-            playa->ProcessWeaponSwitch(pad);
-            point = false;
-        }
 
         if (animRel)
             point = true;
@@ -1370,6 +1367,12 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 
             playa->ClearPointGunAt();
             playa->m_nPedFlags.bIsDucking = true;
+        }
+
+        if (playa->m_nPedFlags.bIsDucking && currentWeapon.HasWeaponAmmoToBeUsed() && playa->m_ePedState == PEDSTATE_ATTACK && currentWeapon.m_nAmmoInClip <= 0) {
+            currentWeapon.m_eWeaponState = WEAPONSTATE_RELOADING;
+            currentWeapon.Update(playa->m_nAudioEntityId);
+            currentWeapon.m_eWeaponState = WEAPONSTATE_FIRING;
         }
     }
 #endif
