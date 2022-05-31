@@ -23,6 +23,8 @@ static float RadToDeg(float x) {
 static float GetAspectRatio() {
 #ifdef GTA3
     float& fScreenAspectRatio = *(float*)0x5F53C0;
+    if (!(*(bool*)0x95CD23))
+        return *(float*)0x5F53C4;
 #else
     float& fScreenAspectRatio = *(float*)0x94DD38;
 #endif

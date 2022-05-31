@@ -16,6 +16,7 @@
 #include "ClassicAxis.h"
 #include "Utility.h"
 #include "CamNew.h"
+#include "CDraw.h"
 
 ClassicAxis classicAxis;
 
@@ -478,13 +479,14 @@ ClassicAxis::ClassicAxis() {
             return false;
         }
         else {
-            float fov = tan(cam->m_fFOV * 0.5f * 0.01403292f);
-            float x = fov * ((camera->m_f3rdPersonCHairMultX - 0.5f + camera->m_f3rdPersonCHairMultX - 0.5f) * (GetAspectRatio()));
-            float y = fov * ((0.5f - camera->m_f3rdPersonCHairMultY + 0.5f - camera->m_f3rdPersonCHairMultY) * (1.0f));
+            float fov = tan(CDraw::ms_fFOV * 0.5f * (M_PI / 180.0f));
+            float x = fov * (camera->m_f3rdPersonCHairMultX - 0.5f + camera->m_f3rdPersonCHairMultX - 0.5f);
+            float y = fov * (0.5f - camera->m_f3rdPersonCHairMultY + 0.5f - camera->m_f3rdPersonCHairMultY);
+            y *= (3.0f / 4.0f) * (4.0f / 3.0f) / GetAspectRatio();
             source = cam->m_vecSource;
             target = cam->m_vecFront;
-            target += cam->m_vecUp * (y);
-            target += CrossProduct(cam->m_vecFront, cam->m_vecUp) * (x);
+            target += cam->m_vecUp * y;
+            target += CrossProduct(cam->m_vecFront, cam->m_vecUp) * x;
             target.Normalise();
             source += DotProduct(pos - source, target) * target;
             target = dist * target + source;
