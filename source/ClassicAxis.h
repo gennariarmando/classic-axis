@@ -22,6 +22,7 @@ public:
     bool camUseCurrentAngle;
     short previousCamMode;
     bool switchTransitionSpeed;
+    short savedCamMode;
 
 #ifdef GTA3
     bool wantsToResetWeaponInfo;

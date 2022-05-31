@@ -32,11 +32,11 @@ static float GetAspectRatio() {
 }
 
 static float ScaleX(float a) {
-    return static_cast<float>(a * SCREEN_WIDTH / defaultScreenWidth) * defaultAspectRatio / GetAspectRatio();
+    return static_cast<float>(a * RsGlobal.screenWidth / defaultScreenWidth) * defaultAspectRatio / GetAspectRatio();
 }
 
 static float ScaleY(float a) {
-    return static_cast<float>(a * SCREEN_HEIGHT / defaultScreenHeight);
+    return static_cast<float>(a * RsGlobal.screenHeight / defaultScreenHeight);
 }
 
 static float DotProduct(const CVector& v1, const CVector& v2) {

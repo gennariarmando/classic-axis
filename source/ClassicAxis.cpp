@@ -125,6 +125,25 @@ ClassicAxis::ClassicAxis() {
         return moveType;
     };
 
+    // Dirty hack to fix mvl and breakable wind shields.
+#ifdef GTA3
+    plugin::ThiscallEvent <plugin::AddressList<0x4E6EBF, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick3N<CWeapon*, 0, CEntity*, 1, CVector*, 2>, char(CWeapon*, CEntity*, CVector*)> onFiring;
+#else
+    plugin::ThiscallEvent <plugin::AddressList<0x52B749, plugin::H_CALL, 0x52B9B4, plugin::H_CALL>, plugin::PRIORITY_BEFORE, plugin::ArgPick3N<CWeapon*, 0, CEntity*, 1, CVector*, 2>, char(CWeapon*, CEntity*, CVector*)> onFiring;
+#endif
+    onFiring.before += [](CWeapon*, CEntity*, CVector*) {
+        if (classicAxis.savedCamMode == -1) {
+            classicAxis.savedCamMode = TheCamera.m_asCams[TheCamera.m_nActiveCam].m_nCamMode;
+            TheCamera.m_asCams[TheCamera.m_nActiveCam].m_nCamMode = MODE_FOLLOW_PED;
+        }
+    };
+    onFiring.after += [](CWeapon*, CEntity*, CVector*) {
+        if (classicAxis.savedCamMode != -1) {
+            TheCamera.m_asCams[TheCamera.m_nActiveCam].m_nCamMode = classicAxis.savedCamMode;
+            classicAxis.savedCamMode = -1;
+        }
+    };
+
 #ifdef GTA3
     int playerShootingDirectionAddr[] = { 0x4E6562, 0x55D88B, 0x560C25, 0x561E63, 0x4EDAD1 };
 #else
@@ -552,6 +571,8 @@ void ClassicAxis::Clear() {
 
 #ifdef GTA3
     wantsToResetWeaponInfo = false;
+#else
+    savedCamMode = -1;
 #endif
 }
 
@@ -688,8 +709,8 @@ void ClassicAxis::DrawCrosshair() {
     if (playa) {
         const eWeaponType weaponType = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponType;
         char mode = cam.m_nCamMode;
-        float x = RsGlobal.maximumWidth * TheCamera.m_f3rdPersonCHairMultX;
-        float y = RsGlobal.maximumHeight * TheCamera.m_f3rdPersonCHairMultY;
+        float x = RsGlobal.screenWidth * TheCamera.m_f3rdPersonCHairMultX;
+        float y = RsGlobal.screenHeight * TheCamera.m_f3rdPersonCHairMultY;
         CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
         eWeaponState state = playa->m_aWeapons[playa->m_nCurrentWeapon].m_eWeaponState;
 
