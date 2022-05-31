@@ -571,9 +571,9 @@ void ClassicAxis::Clear() {
 
 #ifdef GTA3
     wantsToResetWeaponInfo = false;
-#else
-    savedCamMode = -1;
 #endif
+
+    savedCamMode = -1;
 }
 
 bool ClassicAxis::IsAbleToAim(CPed* ped) {
