@@ -24,7 +24,7 @@ CColPoint* gaTempSphereColPoints = (CColPoint*)0x6E64C0;
 #else
 CColPoint* gaTempSphereColPoints = (CColPoint*)0x7D18C0;
 #endif
-std::shared_ptr<CCamNew> CamNew;
+std::unique_ptr<CCamNew> CamNew;
 
 CCamNew::CCamNew() {
     cam = &TheCamera.m_asCams[TheCamera.m_nActiveCam];
@@ -50,7 +50,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
 
-    Process_FOVLerp();
+    if (classicAxis.settings.zoomForAssaultRifles)
+        Process_FOVLerp();
+    else
+        cam->m_fFOV = 70.0f;
 
     const float minDist = 2.0f;
 #ifdef GTA3
@@ -214,7 +217,10 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         return;
 
     doFovChanges = true;
-    Process_FOVLerp();
+    if (classicAxis.settings.zoomForAssaultRifles)
+        Process_FOVLerp();
+    else
+        cam->m_fFOV = 70.0f;
 
     CPlayerPed* e = static_cast<CPlayerPed*>(cam->m_pCamTargetEntity);
 

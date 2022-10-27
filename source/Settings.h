@@ -18,6 +18,7 @@ public:
     bool storiesPointingArm;
     float rightAnalogStickSensitivityX;
     float rightAnalogStickSensitivityY;
+    bool zoomForAssaultRifles;
 #ifdef GTA3
     std::string crouchKey;
 #endif

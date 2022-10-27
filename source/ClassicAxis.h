@@ -23,6 +23,7 @@ public:
     short previousCamMode;
     bool switchTransitionSpeed;
     short savedCamMode;
+    bool isSwimming;
 
 #ifdef GTA3
     bool wantsToResetWeaponInfo;

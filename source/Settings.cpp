@@ -18,6 +18,7 @@ void Settings::Read() {
     storiesPointingArm = config["StoriesPointingArm"].asBool(false);
     rightAnalogStickSensitivityX = config["RightAnalogStickSensitivityX"].asFloat(1.0f);
     rightAnalogStickSensitivityY = config["RightAnalogStickSensitivityY"].asFloat(1.0f);
+    zoomForAssaultRifles = config["ZoomForAssaultRifles"].asBool(true);
 
 #ifdef GTA3
     crouchKey = config["CrouchKey"].asString("C");

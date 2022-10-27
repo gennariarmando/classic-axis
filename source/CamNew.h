@@ -41,4 +41,4 @@ public:
 
 extern const float minFOV;
 extern const float maxFOV;
-extern std::shared_ptr<CCamNew> CamNew;
+extern std::unique_ptr<CCamNew> CamNew;

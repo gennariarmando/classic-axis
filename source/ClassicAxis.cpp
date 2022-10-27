@@ -73,12 +73,12 @@ ClassicAxis::ClassicAxis() {
 #ifdef GTA3
     plugin::patch::SetChar(0x4F1F72 + 2, -1);
 #else
-    plugin::patch::SetChar(0x5349DB, 0x90); // M4
-    plugin::patch::SetChar(0x5349DB + 1, 0x90); // M4
-    plugin::patch::SetChar(0x5349E0, 0x90); // Ruger
-    plugin::patch::SetChar(0x5349E0 + 1, 0x90); // Ruger
-    plugin::patch::SetChar(0x5349E5, 0x90); // M60
-    plugin::patch::SetChar(0x5349E5 + 1, 0x90); // M60
+    plugin::patch::Set<BYTE>(0x5349DB, 0x90); // M4
+    plugin::patch::Set<BYTE>(0x5349DB + 1, 0x90); // M4
+    plugin::patch::Set<BYTE>(0x5349E0, 0x90); // Ruger
+    plugin::patch::Set<BYTE>(0x5349E0 + 1, 0x90); // Ruger
+    plugin::patch::Set<BYTE>(0x5349E5, 0x90); // M60
+    plugin::patch::Set<BYTE>(0x5349E5 + 1, 0x90); // M60
 #endif
     // No fight cam
 #ifdef GTA3
@@ -90,7 +90,7 @@ ClassicAxis::ClassicAxis() {
     plugin::patch::Nop(0x471613, 9);
 
     // Fix jump fail
-    plugin::patch::SetChar(0x4F0031, 0xEB);
+    plugin::patch::Set<BYTE>(0x4F0031, 0xEB);
 #endif
 
     auto playerMovementType = [](int, int) {
@@ -562,7 +562,7 @@ void ClassicAxis::Clear() {
     switchTransitionSpeed = false;
 
     if (!CamNew)
-        CamNew = std::make_shared<CCamNew>();
+        CamNew = std::make_unique<CCamNew>();
 
     previousCamMode = CamNew->cam->m_nCamMode;
     previousHorAngle = CamNew->cam->m_fHorizontalAngle;
@@ -574,6 +574,7 @@ void ClassicAxis::Clear() {
 #endif
 
     savedCamMode = -1;
+    isSwimming = false;
 }
 
 bool ClassicAxis::IsAbleToAim(CPed* ped) {
@@ -581,6 +582,9 @@ bool ClassicAxis::IsAbleToAim(CPed* ped) {
     eMoveState m = ped->m_eMoveState;
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+        return false;
 
     switch (s) {
     case PEDSTATE_NONE:
@@ -620,6 +624,9 @@ bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
+    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+        return false;
+
     switch (weaponType) {
     case WEAPONTYPE_FLAMETHROWER:
 #ifndef GTA3
@@ -652,6 +659,9 @@ bool ClassicAxis::CanDuckWithThisWeapon(eWeaponType weapon) {
 bool ClassicAxis::IsTypeMelee(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 
+    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+        return true;
+
 #ifdef GTA3
     switch (weaponType) {
     case WEAPONTYPE_UNARMED:
@@ -672,6 +682,9 @@ bool ClassicAxis::IsTypeMelee(CPed* ped) {
 bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
+
+    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+        return false;
 
     switch (weaponType) {
     case WEAPONTYPE_FLAMETHROWER:
@@ -1357,7 +1370,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
 #endif
             }
 
-            if (mode != previousCamMode) {
+            if (mode != previousCamMode && !pad->DisablePlayerControls && playa->IsPedInControl()) {
                 TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
                 TheCamera.m_bLookingAtPlayer = true;
                 classicAxis.switchTransitionSpeed = true;
