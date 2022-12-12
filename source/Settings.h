@@ -6,13 +6,23 @@ enum eLockOnTargetType {
     TARGET_LCS
 };
 
+enum eAimingCoords {
+    COORDS_SA,
+    COORDS_STORIES,
+    COORDS_CUSTOM
+};
+
 class Settings {
 public:
     bool forceAutoAim;
     int lockOnTargetType;
     bool showTriangleForMouseRecruit;
     std::string walkKey;
-    bool storiesAimingCoords;
+    int transitionSpeed;
+    float aimingCoordsX;
+    float aimingCoordsY;
+    float aimingCoordsZ;
+    int aimingCoords;
     float cameraCrosshairMultX;
     float cameraCrosshairMultY;
     bool storiesPointingArm;

@@ -230,10 +230,12 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     CVector aimOffset;
     
-    if (classicAxis.settings.storiesAimingCoords)
-        aimOffset = CVector(0.55f, 0.0f, 0.0f);
-    else
+    if (classicAxis.settings.aimingCoords == COORDS_SA)
         aimOffset = CVector(0.2f, 0.0f, 0.0f);
+    else if (classicAxis.settings.aimingCoords == COORDS_STORIES)
+        aimOffset = CVector(0.55f, 0.0f, 0.0f);
+    else if (classicAxis.settings.aimingCoords == COORDS_CUSTOM)
+        aimOffset = CVector(classicAxis.settings.aimingCoordsX, classicAxis.settings.aimingCoordsY, classicAxis.settings.aimingCoordsZ);
 
 #ifdef GTA3
     CMatrix& mat = e->m_matrix;
