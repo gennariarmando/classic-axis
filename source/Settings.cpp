@@ -9,6 +9,7 @@ void Settings::Read() {
 #endif
 
     forceAutoAim = config["ForceAutoAim"].asBool(false);
+    disableAutoAimOnController = config["DisableAutoAimOnController"].asBool(false);
     lockOnTargetType = config["LockOnTargetType"].asInt(TARGET_SA);
     showTriangleForMouseRecruit = config["ShowTriangleForMouseRecruit"].asBool(true);
     walkKey = config["WalkKey"].asString("LALT");

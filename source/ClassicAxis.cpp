@@ -18,6 +18,10 @@
 #include "CamNew.h"
 #include "CDraw.h"
 
+#ifdef GTA3
+#include "RpAnimBlend.h"
+#endif
+
 ClassicAxis classicAxis;
 
 ClassicAxis::ClassicAxis() {
@@ -302,7 +306,10 @@ ClassicAxis::ClassicAxis() {
     plugin::Events::drawHudEvent += [] {
         classicAxis.DrawCrosshair();
 
-        bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
+        bool hasPadInHands = classicAxis.pXboxPad->HasPadInHands();
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
+
         if (!disableAutoAim)
             classicAxis.DrawAutoAimTarget();
 
@@ -447,7 +454,10 @@ ClassicAxis::ClassicAxis() {
     plugin::ThiscallEvent <plugin::AddressList<0x534D64, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPlayerPed*, 0>, void(CPlayerPed*)> onFindingLockOnTarget;
 #endif
     onFindingLockOnTarget += [](CPlayerPed* ped) {
-        bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
+        bool hasPadInHands = classicAxis.pXboxPad->HasPadInHands();
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
+
         if (disableAutoAim || 
             (ped->m_pPointGunAt && !ped->m_pPointGunAt->GetIsOnScreenComplex()))
             ped->ClearWeaponTarget();
@@ -583,8 +593,13 @@ bool ClassicAxis::IsAbleToAim(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
+#ifdef GTA3
+    if (weaponType == WEAPONTYPE_UNARMED)
+        return false;
+#else
     if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
         return false;
+#endif
 
     switch (s) {
     case PEDSTATE_NONE:
@@ -624,8 +639,13 @@ bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
+#ifdef GTA3
+    if (weaponType == WEAPONTYPE_UNARMED)
+        return false;
+#else
     if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
         return false;
+#endif
 
     switch (weaponType) {
     case WEAPONTYPE_FLAMETHROWER:
@@ -659,8 +679,13 @@ bool ClassicAxis::CanDuckWithThisWeapon(eWeaponType weapon) {
 bool ClassicAxis::IsTypeMelee(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 
+#ifdef GTA3
+    if (weaponType == WEAPONTYPE_UNARMED)
+        return false;
+#else
     if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
-        return true;
+        return false;
+#endif
 
 #ifdef GTA3
     switch (weaponType) {
@@ -683,8 +708,13 @@ bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
+#ifdef GTA3
+    if (weaponType == WEAPONTYPE_UNARMED)
+        return false;
+#else
     if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
         return false;
+#endif
 
     switch (weaponType) {
     case WEAPONTYPE_FLAMETHROWER:
@@ -1203,7 +1233,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         CEntity* p = playa->m_pPointGunAt;
         float mouseX = pad->NewMouseControllerState.x;
         float mouseY = pad->NewMouseControllerState.y;
-        bool disableAutoAim = !hasPadInHands && !settings.forceAutoAim;
+
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
 
         if (!disableAutoAim) {
             if (playa->m_bHasLockOnTarget && p) {
