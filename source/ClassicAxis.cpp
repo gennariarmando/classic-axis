@@ -302,7 +302,10 @@ ClassicAxis::ClassicAxis() {
     plugin::Events::drawHudEvent += [] {
         classicAxis.DrawCrosshair();
 
-        bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
+        bool hasPadInHands = classicAxis.pXboxPad->HasPadInHands();
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
+
         if (!disableAutoAim)
             classicAxis.DrawAutoAimTarget();
 
@@ -447,7 +450,10 @@ ClassicAxis::ClassicAxis() {
     plugin::ThiscallEvent <plugin::AddressList<0x534D64, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickN<CPlayerPed*, 0>, void(CPlayerPed*)> onFindingLockOnTarget;
 #endif
     onFindingLockOnTarget += [](CPlayerPed* ped) {
-        bool disableAutoAim = !classicAxis.pXboxPad->HasPadInHands() && !classicAxis.settings.forceAutoAim;
+        bool hasPadInHands = classicAxis.pXboxPad->HasPadInHands();
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
+
         if (disableAutoAim || 
             (ped->m_pPointGunAt && !ped->m_pPointGunAt->GetIsOnScreenComplex()))
             ped->ClearWeaponTarget();
@@ -1203,7 +1209,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         CEntity* p = playa->m_pPointGunAt;
         float mouseX = pad->NewMouseControllerState.x;
         float mouseY = pad->NewMouseControllerState.y;
-        bool disableAutoAim = !hasPadInHands && !settings.forceAutoAim;
+
+        bool disableAutoAim = !hasPadInHands && !classicAxis.settings.forceAutoAim ||
+            hasPadInHands && classicAxis.settings.disableAutoAimOnController;
 
         if (!disableAutoAim) {
             if (playa->m_bHasLockOnTarget && p) {

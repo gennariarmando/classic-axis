@@ -9,6 +9,7 @@ enum eLockOnTargetType {
 class Settings {
 public:
     bool forceAutoAim;
+    bool disableAutoAimOnController;
     int lockOnTargetType;
     bool showTriangleForMouseRecruit;
     std::string walkKey;
