@@ -323,7 +323,7 @@ ClassicAxis::ClassicAxis() {
     const CMenuScreen controllerSetup = {
         "FET_CTL", 41, 41, 41, 0, 0,
         MENUACTION_REDEFCTRL, "FET_RDK",  0, MENUPAGE_KEYBOARD_CONTROLS,
-        MENUACTION_CHANGEMENU, "FET_AMS", 0, MENUPAGE_MOUSE_CONTROLS,
+        MENUACTION_CHANGEMENU, "FET_AMS", 0, MENUPAGE_MOUSE_SETTINGS,
         MENUACTION_RESTOREDEF, "FET_DEF", 0, MENUPAGE_CONTROLLER_PC,
         MENUACTION_CHANGEMENU, "FEDS_TB", 0, MENUPAGE_NONE,
     };
@@ -334,7 +334,7 @@ ClassicAxis::ClassicAxis() {
     "FET_CTL", MENUPAGE_OPTIONS, 0,
     {
         { MENUACTION_REDEFCTRL, "FEC_RED", 0, MENUPAGE_KEYBOARD_CONTROLS, 320, 150, 3 },
-        { MENUACTION_CHANGEMENU,"FEC_MOU", 0, MENUPAGE_MOUSE_CONTROLS, 0, 0, 3 },
+        { MENUACTION_CHANGEMENU,"FEC_MOU", 0, MENUPAGE_MOUSE_SETTINGS, 0, 0, 3 },
         { MENUACTION_RESTOREDEF, "FET_DEF", 0, MENUPAGE_CONTROLLER_PC, 0, 0, 3 },
         { MENUACTION_GOBACK, "FEDS_TB", 0, MENUPAGE_NONE, 0, 0, 3 },
     }
@@ -583,7 +583,11 @@ bool ClassicAxis::IsAbleToAim(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
-    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+    if (weaponType == WEAPONTYPE_UNARMED
+#ifdef GTAVC
+        || weaponType == WEAPONTYPE_BRASSKNUCKLE
+#endif
+        )
         return false;
 
     switch (s) {
@@ -624,7 +628,11 @@ bool ClassicAxis::IsWeaponPossiblyCompatible(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
-    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+    if (weaponType == WEAPONTYPE_UNARMED
+#ifdef GTAVC
+        || weaponType == WEAPONTYPE_BRASSKNUCKLE
+#endif
+        )
         return false;
 
     switch (weaponType) {
@@ -659,7 +667,11 @@ bool ClassicAxis::CanDuckWithThisWeapon(eWeaponType weapon) {
 bool ClassicAxis::IsTypeMelee(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
 
-    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+    if (weaponType == WEAPONTYPE_UNARMED
+#ifdef GTAVC
+        || weaponType == WEAPONTYPE_BRASSKNUCKLE
+#endif
+        )
         return true;
 
 #ifdef GTA3
@@ -683,7 +695,11 @@ bool ClassicAxis::IsTypeTwoHanded(CPed* ped) {
     const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
-    if (weaponType == WEAPONTYPE_UNARMED || weaponType == WEAPONTYPE_BRASSKNUCKLE)
+    if (weaponType == WEAPONTYPE_UNARMED
+#ifdef GTAVC
+        || weaponType == WEAPONTYPE_BRASSKNUCKLE
+#endif
+        )
         return false;
 
     switch (weaponType) {
@@ -1162,7 +1178,7 @@ bool ClassicAxis::WalkKeyDown() {
 void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     CPad* pad = CPad::GetPad(0);
     CCam& cam = TheCamera.m_asCams[TheCamera.m_nActiveCam];
-    short& mode = cam.m_nCamMode;
+    short mode = cam.m_nCamMode;
     float front = CGeneral::LimitRadianAngle(-TheCamera.m_fOrientation);
     float height = Find3rdPersonQuickAimPitch(TheCamera.m_f3rdPersonCHairMultY);
     CWeapon& currentWeapon = playa->m_aWeapons[playa->m_nCurrentWeapon];
@@ -1188,7 +1204,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
         (!playa->m_nPedFlags.bIsDucking || CanDuckWithThisWeapon(weaponType)) &&
 #endif
         pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && !IsType1stPerson(playa) && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON)
-        && currentWeapon.HasWeaponAmmoToBeUsed()) {
+        && currentWeapon.HasWeaponAmmoToBeUsed() && !pad->JumpJustDown() && !pad->GetSprint()) {
         isAiming = true;
         if (mode != MODE_AIMWEAPON && playa->IsPedInControl() && TheCamera.m_nTransitionState == 0) {
             TheCamera.TakeControl(FindPlayerPed(), MODE_AIMWEAPON, 1, 0);
@@ -1347,7 +1363,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     }
 
     if (!isAiming) {
-        if (wasPointing) {
+        //if (wasPointing) {
             playa->ClearPointGunAt();
             playa->ClearWeaponTarget();
 
@@ -1377,10 +1393,9 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
                 classicAxis.previousHorAngle = cam.m_fHorizontalAngle;
                 classicAxis.previousVerAngle = cam.m_fVerticalAngle;
                 previousCamMode = mode;
+                wasPointing = false;
             }
-
-            wasPointing = false;
-        }
+        //}
     }
     
     if (playa->m_ePedState == PEDSTATE_ATTACK && IsAbleToAim(playa) && ((IsTypeTwoHanded(playa) && !IsTypeMelee(playa) && mode == MODE_FOLLOW_PED))) {
@@ -1388,7 +1403,7 @@ void ClassicAxis::ProcessPlayerPedControl(CPlayerPed* playa) {
     }
  
 #ifdef GTA3
-    if (!pad->DisablePlayerControls && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) && IsAbleToAim(playa)) {
+    if (settings.crouchKey != "NULL" && !pad->DisablePlayerControls && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) && IsAbleToAim(playa)) {
         bool duckJustDown = DuckKeyDown();
 
         if (!playa->m_nPedFlags.bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT) {

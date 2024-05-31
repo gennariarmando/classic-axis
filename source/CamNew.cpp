@@ -380,7 +380,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
         float distFromPoint = (targetCoords - colPoint.m_vecPoint).Magnitude();
         cam->m_vecSource = colPoint.m_vecPoint;
         if (distFromPoint < 1.3f)
-            RwCameraSetNearClipPlane(Scene.m_pCamera, max(distFromPoint - 0.3f, 0.05f));
+            RwCameraSetNearClipPlane(Scene.m_pCamera, std::max(distFromPoint - 0.3f, 0.05f));
     }
 
     float viewPlaneHeight = tan(DegToRad(cam->m_fFOV) * 0.5f);
@@ -410,7 +410,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
                 float frontDist = DotProduct(distFromPoint, cam->m_vecFront);
                 float dist = (distFromPoint - cam->m_vecFront * frontDist).Magnitude() / viewPlaneWidth;
 
-                dist = max(min(nearClip, dist), 0.1f);
+                dist = std::max(std::min(nearClip, dist), 0.1f);
                 if (dist < nearClip)
                     RwCameraSetNearClipPlane(Scene.m_pCamera, dist);
 

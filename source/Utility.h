@@ -69,7 +69,7 @@ static void WellBufferMe(float Target, float* CurrentValue, float* CurrentSpeed,
     else if (TargetSpeed > 0.0f && *CurrentSpeed > TargetSpeed)
         *CurrentSpeed = TargetSpeed;
 
-    *CurrentValue += *CurrentSpeed * min(10.0f, CTimer::ms_fTimeStep);
+    *CurrentValue += *CurrentSpeed * std::min(10.0f, CTimer::ms_fTimeStep);
 }
 
 static CVector TransformFromObjectSpace(CMatrix const& m, float heading, CVector const& offset) {
