@@ -207,7 +207,7 @@ ClassicAxis::ClassicAxis() {
     onStartingTransition.after += [](CCam* cam, short mode) {
         if (mode == MODE_AIMWEAPON || mode == MODE_FOLLOW_PED) {
             if (classicAxis.switchTransitionSpeed) {
-                const int transitionDuration = 500;
+                const int transitionDuration = classicAxis.settings.transitionSpeed;
 
                 TheCamera.m_nTransitionDuration = transitionDuration;
 #ifdef GTAVC

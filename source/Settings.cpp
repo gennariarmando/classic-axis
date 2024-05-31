@@ -12,13 +12,17 @@ void Settings::Read() {
     lockOnTargetType = config["LockOnTargetType"].asInt(TARGET_SA);
     showTriangleForMouseRecruit = config["ShowTriangleForMouseRecruit"].asBool(true);
     walkKey = config["WalkKey"].asString("LALT");
-    storiesAimingCoords = config["StoriesAimingCoords"].asBool(false);
     cameraCrosshairMultX = config["CameraCrosshairMultX"].asFloat(0.53f);
     cameraCrosshairMultY = config["CameraCrosshairMultY"].asFloat(0.4f);
     storiesPointingArm = config["StoriesPointingArm"].asBool(false);
     rightAnalogStickSensitivityX = config["RightAnalogStickSensitivityX"].asFloat(1.0f);
     rightAnalogStickSensitivityY = config["RightAnalogStickSensitivityY"].asFloat(1.0f);
     zoomForAssaultRifles = config["ZoomForAssaultRifles"].asBool(true);
+    aimingCoords = config["AimingCoords"].asInt(COORDS_SA);
+    aimingCoordsX = config["AimingCoordsX"].asFloat(0.0f);
+    aimingCoordsY = config["AimingCoordsY"].asFloat(0.0f);
+    aimingCoordsZ = config["AimingCoordsZ"].asFloat(0.0f);
+    transitionSpeed = config["TransitionSpeed"].asInt(500);
 
 #ifdef GTA3
     crouchKey = config["CrouchKey"].asString("C");
