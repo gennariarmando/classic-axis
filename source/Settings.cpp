@@ -1,6 +1,8 @@
 #include "plugin.h"
 #include "Settings.h"
 
+Settings settings;
+
 void Settings::Read() {
 #ifdef GTA3
     plugin::config_file config(PLUGIN_PATH("ClassicAxisIII.ini"));

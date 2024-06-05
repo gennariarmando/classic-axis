@@ -8,12 +8,17 @@
 #include "CDraw.h"
 #include "CFont.h"
 #include "CWeaponInfo.h"
+#include "Settings.h"
 
-#include "ClassicAxis.h"
 #include "CamNew.h"
 #include "Utility.h"
 
 using namespace plugin;
+
+float previousHorAngle;
+float previousVerAngle;
+bool camUseCurrentAngle = false;
+class IGInputPad* pXboxPad = nullptr;
 
 const float minFOV = 50.0f;
 const float maxFOV = 70.0f;
@@ -50,7 +55,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
 
-    if (classicAxis.settings.zoomForAssaultRifles)
+    if (settings.zoomForAssaultRifles)
         Process_FOVLerp();
     else
         cam->m_fFOV = 70.0f;
@@ -62,7 +67,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     const float maxDist = minDist + TheCamera.m_fPedZoomValueScript;
 #endif
     const float heightOffset = 0.5f;
-    const bool usingController = classicAxis.pXboxPad->HasPadInHands();
+    const bool usingController = pXboxPad->HasPadInHands();
 
     targetCoords = target;
 
@@ -129,8 +134,8 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 
     float betaOffset = lookLeftRight * 0.01f * (1.0f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
     float alphaOffset = lookUpDown * 0.01f * (0.6f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
-    betaOffset *= classicAxis.settings.rightAnalogStickSensitivityX;
-    alphaOffset *= classicAxis.settings.rightAnalogStickSensitivityY;
+    betaOffset *= settings.rightAnalogStickSensitivityX;
+    alphaOffset *= settings.rightAnalogStickSensitivityY;
 
     if (mouseInput) {
         betaOffset = lookLeftRight * TheCamera.m_fMouseAccelHorzntal * cam->m_fFOV / 80.0f;
@@ -187,10 +192,10 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
         TheCamera.m_bCamDirectlyInFront = false;
     }
 
-    if (classicAxis.camUseCurrentAngle) {
-        cam->m_fHorizontalAngle = classicAxis.previousHorAngle;
-        cam->m_fVerticalAngle = classicAxis.previousVerAngle;
-        classicAxis.camUseCurrentAngle = false;
+    if (camUseCurrentAngle) {
+        cam->m_fHorizontalAngle = previousHorAngle;
+        cam->m_fVerticalAngle = previousVerAngle;
+        camUseCurrentAngle = false;
     }
 
     cam->m_fDistanceBeforeChanges = (cam->m_vecSource - targetCoords).Magnitude();
@@ -217,7 +222,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         return;
 
     doFovChanges = true;
-    if (classicAxis.settings.zoomForAssaultRifles)
+    if (settings.zoomForAssaultRifles)
         Process_FOVLerp();
     else
         cam->m_fFOV = 70.0f;
@@ -230,7 +235,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     CVector aimOffset;
     
-    if (classicAxis.settings.storiesAimingCoords)
+    if (settings.storiesAimingCoords)
         aimOffset = CVector(0.55f, 0.0f, 0.0f);
     else
         aimOffset = CVector(0.2f, 0.0f, 0.0f);
@@ -303,8 +308,8 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
     float betaOffset = lookLeftRight * 0.01f * (1.0f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
     float alphaOffset = lookUpDown * 0.01f * (0.6f / 20.0f) * cam->m_fFOV / 80.0f * CTimer::ms_fTimeStep;
-    betaOffset *= classicAxis.settings.rightAnalogStickSensitivityX;
-    alphaOffset *= classicAxis.settings.rightAnalogStickSensitivityY;
+    betaOffset *= settings.rightAnalogStickSensitivityX;
+    alphaOffset *= settings.rightAnalogStickSensitivityY;
 
     if (mouseInput) {
         betaOffset = lookLeftRight * TheCamera.m_fMouseAccelHorzntal * cam->m_fFOV / 80.0f;
@@ -344,10 +349,10 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
         TheCamera.m_bCamDirectlyInFront = false;
     }
 
-    if (classicAxis.camUseCurrentAngle) {
-        cam->m_fHorizontalAngle = classicAxis.previousHorAngle;
-        cam->m_fVerticalAngle = classicAxis.previousVerAngle;
-        classicAxis.camUseCurrentAngle = false;
+    if (camUseCurrentAngle) {
+        cam->m_fHorizontalAngle = previousHorAngle;
+        cam->m_fVerticalAngle = previousVerAngle;
+        camUseCurrentAngle = false;
     }
 
     cam->m_fDistanceBeforeChanges = (cam->m_vecSource - targetCoords).Magnitude();

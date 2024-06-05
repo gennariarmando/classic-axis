@@ -26,3 +26,5 @@ public:
 public:
     void Read();
 };
+
+extern Settings settings;

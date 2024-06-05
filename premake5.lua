@@ -11,7 +11,7 @@ project "classic-axis"
 	characterset ("MBCS")
 	linkoptions "/SAFESEH:NO"
 	buildoptions { "-std:c++latest", "/permissive" }
-	defines { "_CRT_SECURE_NO_WARNINGS", "_CRT_NON_CONFORMING_SWPRINTFS", "_USE_MATH_DEFINES" }
+	defines { "_CRT_SECURE_NO_WARNINGS", "_CRT_NON_CONFORMING_SWPRINTFS", "_USE_MATH_DEFINES", "RW" }
 	disablewarnings { "4244", "4800", "4305", "4073", "4838", "4996", "4221", "4430", "26812", "26495", "6031" }
     cppdialect "C++latest"
 

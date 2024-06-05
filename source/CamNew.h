@@ -1,6 +1,9 @@
 #pragma once
 #include "CCam.h"
 
+#define GINPUT_COMPILE_CROSSCOMPATIBLE_VERSION
+#include "GInputAPI.h"
+
 enum {
     TYPE_WALKAROUND,
     TYPE_STRAFE,
@@ -38,6 +41,10 @@ public:
     void Process_FOVLerp();
 };
 
+extern float previousHorAngle;
+extern float previousVerAngle;
+extern bool camUseCurrentAngle;
+extern class IGInputPad* pXboxPad;
 
 extern const float minFOV;
 extern const float maxFOV;
