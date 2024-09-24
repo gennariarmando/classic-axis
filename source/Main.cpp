@@ -1394,15 +1394,11 @@ public:
 
         if (!isAiming) {
             //if (wasPointing) {
-#ifdef GTAVC
-            if (weaponType != WEAPONTYPE_CHAINSAW)
+            if (!IsTypeMelee(playa))
             {
-#endif
                 playa->ClearPointGunAt();
                 playa->ClearWeaponTarget();
-#ifdef GTAVC
             }
-#endif
 
             if (wasCrouching) {
                 if (currentWeapon.m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO && currentWeapon.m_eWeaponState != WEAPONSTATE_RELOADING &&
