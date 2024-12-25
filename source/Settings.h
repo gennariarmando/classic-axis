@@ -19,6 +19,8 @@ public:
     float rightAnalogStickSensitivityX;
     float rightAnalogStickSensitivityY;
     bool zoomForAssaultRifles;
+    bool modernCamera;
+
 #ifdef GTA3
     std::string crouchKey;
 #endif

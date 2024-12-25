@@ -35,6 +35,7 @@ project "classic-axis"
 		includedirs {
 			"$(PLUGIN_SDK_DIR)/plugin_III/",
 			"$(PLUGIN_SDK_DIR)/plugin_III/game_III/",
+            "$(PLUGIN_SDK_DIR)/plugin_III/game_III/rw",
 		}
 		targetname "ClassicAxisIII"
 		debugdir "$(GTA_III_DIR)"
@@ -46,7 +47,8 @@ project "classic-axis"
 		includedirs {
 			"$(PLUGIN_SDK_DIR)/plugin_vc/",
 			"$(PLUGIN_SDK_DIR)/plugin_vc/game_vc/",
-		}
+            "$(PLUGIN_SDK_DIR)/plugin_vc/game_vc/rw",
+        }
 		targetname "ClassicAxisVC"
 		debugdir "$(GTA_VC_DIR)"
 		debugcommand "$(GTA_VC_DIR)/gta-vc.exe"

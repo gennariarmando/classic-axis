@@ -8,6 +8,8 @@
 #include "CDraw.h"
 #include "CFont.h"
 #include "CWeaponInfo.h"
+#include "cBuoyancy.h"
+
 #include "Settings.h"
 
 #include "CamNew.h"
@@ -22,6 +24,7 @@ class IGInputPad* pXboxPad = nullptr;
 
 const float minFOV = 50.0f;
 const float maxFOV = 70.0f;
+const float maxFOVModern = 70.0f;
 const float wepMinRange = 70.0f;
 
 #ifdef GTA3
@@ -58,7 +61,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     if (settings.zoomForAssaultRifles)
         Process_FOVLerp();
     else
-        cam->m_fFOV = 70.0f;
+        cam->m_fFOV = settings.modernCamera ? maxFOVModern : maxFOV;
 
     const float minDist = 2.0f;
 #ifdef GTA3
@@ -66,10 +69,15 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
 #else
     const float maxDist = minDist + TheCamera.m_fPedZoomValueScript;
 #endif
-    const float heightOffset = 0.5f;
+    const float heightOffset = 0.4f;
     const bool usingController = pXboxPad->HasPadInHands();
 
     targetCoords = target;
+
+    if (settings.modernCamera) {
+        targetCoords += TheCamera.GetRight() * -0.25f;
+        targetCoords += TheCamera.GetUp() * 0.075f;
+    }
 
     Process_CrouchOffset(duckOffset);
 
@@ -203,6 +211,14 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecFront = CVector(cos(cam->m_fVerticalAngle) * cos(cam->m_fHorizontalAngle), cos(cam->m_fVerticalAngle) * sin(cam->m_fHorizontalAngle), sin(cam->m_fVerticalAngle));
     cam->m_vecSource = targetCoords - cam->m_vecFront * length;
     cam->m_vecSourceBeforeLookBehind = targetCoords + cam->m_vecFront;
+    
+    if (((CPed*)cam->m_pCamTargetEntity)->m_nFlags.bTouchingWater && cam->m_vecSource.z < mod_Buoyancy.m_waterlevel + 0.6f) {
+        RwCameraSetNearClipPlane(Scene.m_pCamera, 0.2f);
+
+        cam->m_vecSource = targetCoords - cam->m_vecFront * (dist * (maxDist / length)).Magnitude2D();
+        cam->m_vecSource.z = mod_Buoyancy.m_waterlevel + 0.6f;
+    }
+    
     targetCoords.z -= heightOffset;
 
     cam->m_vecTargetCoorsForFudgeInter = targetCoords;
@@ -225,7 +241,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     if (settings.zoomForAssaultRifles)
         Process_FOVLerp();
     else
-        cam->m_fFOV = 70.0f;
+        cam->m_fFOV = settings.modernCamera ? maxFOVModern : maxFOV;
 
     CPlayerPed* e = static_cast<CPlayerPed*>(cam->m_pCamTargetEntity);
 
@@ -431,8 +447,10 @@ void CCamNew::Process_CrouchOffset(float& offset) {
 
     float end = 0.0f;
     if (e->m_nPedFlags.bIsDucking) {
+        float f = settings.modernCamera ? maxFOVModern : maxFOV;
+
         end = -0.5f;
-        end += ((maxFOV - cam->m_fFOV) / minFOV * (maxFOV)) / 100.0f;
+        end += ((f - cam->m_fFOV) / minFOV * (f)) / 100.0f;
     }
 
     offset = interpF(offset, end, 0.1f * CTimer::ms_fTimeStep);
@@ -468,7 +486,8 @@ void CCamNew::Process_FOVLerp() {
             fovLerp = interpF(fovLerp, minFOV, 0.1f * CTimer::ms_fTimeStep);
         }
         else {
-            fovLerp = interpF(fovLerp, maxFOV, 0.1f * CTimer::ms_fTimeStep);
+            float f = settings.modernCamera ? maxFOVModern : maxFOV;
+            fovLerp = interpF(fovLerp, f, 0.1f * CTimer::ms_fTimeStep);
         }
     }
 

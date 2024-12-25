@@ -21,7 +21,7 @@ void Settings::Read() {
     rightAnalogStickSensitivityX = config["RightAnalogStickSensitivityX"].asFloat(1.0f);
     rightAnalogStickSensitivityY = config["RightAnalogStickSensitivityY"].asFloat(1.0f);
     zoomForAssaultRifles = config["ZoomForAssaultRifles"].asBool(true);
-
+    modernCamera = config["ModernCamera"].asBool(true);
 #ifdef GTA3
     crouchKey = config["CrouchKey"].asString("C");
 #endif
