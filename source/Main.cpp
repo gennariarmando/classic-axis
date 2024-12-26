@@ -16,7 +16,9 @@
 #include "Utility.h"
 #include "CamNew.h"
 #include "CDraw.h"
+#ifdef GTA3
 #include "RpAnimBlend.h"
+#endif
 
 #include "Settings.h"
 
@@ -1392,8 +1394,11 @@ public:
 
         if (!isAiming) {
             //if (wasPointing) {
-            playa->ClearPointGunAt();
-            playa->ClearWeaponTarget();
+            if (!IsTypeMelee(playa))
+            {
+                playa->ClearPointGunAt();
+                playa->ClearWeaponTarget();
+            }
 
             if (wasCrouching) {
                 if (currentWeapon.m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO && currentWeapon.m_eWeaponState != WEAPONSTATE_RELOADING &&
@@ -1414,7 +1419,7 @@ public:
 #endif
             }
 
-            if (mode != previousCamMode && !pad->DisablePlayerControls && playa->IsPedInControl()) {
+            if (mode != previousCamMode && (!pad->DisablePlayerControls && playa->IsPedInControl()) || playa->m_ePedState == PEDSTATE_DEAD) {
                 TheCamera.TakeControl(FindPlayerPed(), previousCamMode, 1, 0);
                 TheCamera.m_bLookingAtPlayer = true;
                 switchTransitionSpeed = true;
