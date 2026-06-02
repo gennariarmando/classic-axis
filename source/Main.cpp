@@ -22,6 +22,10 @@
 
 #pragma optimize("", off)
 
+namespace {
+    constexpr float kRotationBlendFactor = 0.02f;
+}
+
 class ClassicAxis {
 public:
     static inline bool isAiming;
@@ -37,6 +41,9 @@ public:
     static inline bool switchTransitionSpeed;
     static inline short savedCamMode;
     static inline bool isSwimming;
+    static inline CPed* rotationPed = nullptr;
+    static inline float rotationCur = 0.0f;
+    static inline bool rotationInitialized = false;
 
 #ifdef GTA3
     static inline bool wantsToResetWeaponInfo;
@@ -264,7 +271,7 @@ public:
 #ifdef GTA3
             CMatrix& mat = e->m_matrix;
 #else
-            CMatrix& mat = e->m_placement;
+            CMatrix& mat = *static_cast<CMatrix*>(e);
 #endif
             if (mat.at.x == 0.0f && mat.at.y == 0.0f)
                 targetOrient = 0.0f;
@@ -386,12 +393,12 @@ public:
         // Weapon smooth spray
         auto doWeaponSmoothSpray = [](CPlayerPed* ped, int) {
 #ifdef GTA3
-            if (ped->m_nPedFlags.bIsDucking)
+            if (ped->bIsDucking)
                 return true;
             else
                 return false;
 #else
-            if (ped->m_nPedFlags.bIsDucking)
+            if (ped->bIsDucking)
                 return 0.00001f;
             else
                 return -1.0f;
@@ -414,7 +421,7 @@ public:
             CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
             if (!info->m_bCrouchFire && !IsTypeMelee(ped)) {
-                ped->m_nPedFlags.bCrouchWhenShooting = false;
+                ped->bCrouchWhenShooting = false;
                 ped->RestorePreviousState();
             }
         };
@@ -437,7 +444,7 @@ public:
             const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;
             CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(weaponType);
 
-            if ((!ped->m_nPedFlags.bIsDucking || info->m_bCrouchFire)) {
+            if ((!ped->bIsDucking || info->m_bCrouchFire)) {
 
             }
             else {
@@ -516,7 +523,7 @@ public:
 #ifdef GTA3
                 CMatrix& mat = cam->m_pCamTargetEntity->m_matrix;
 #else
-                CMatrix& mat = cam->m_pCamTargetEntity->m_placement;
+                CMatrix& mat = *static_cast<CMatrix*>(cam->m_pCamTargetEntity);
 #endif
 
                 target = dist * mat.up + source;
@@ -531,8 +538,8 @@ public:
                 target = cam->m_vecFront;
                 target += cam->m_vecUp * y;
                 target += CrossProduct(cam->m_vecFront, cam->m_vecUp) * x;
-                target.Normalise();
-                source += DotProduct(pos - source, target) * target;
+                NormalizeVector(target);
+                source += DotProduct3D(pos - source, target) * target;
                 target = dist * target + source;
                 return true;
             }
@@ -544,33 +551,50 @@ public:
 #endif
     }
 
+    static void ResetRotationState() {
+        rotationInitialized = false;
+        rotationPed = nullptr;
+        rotationCur = 0.0f;
+    }
+
     static void RotatePlayer(CPed* ped, float angle, bool smooth) {
         if (ignoreRotation)
             return;
 
+        if (!ped) {
+            ResetRotationState();
+            return;
+        }
+
+        if (!rotationInitialized || rotationPed != ped) {
+            rotationCur = CGeneral::LimitRadianAngle(ped->GetHeading());
+            rotationPed = ped;
+            rotationInitialized = true;
+        }
+
+        float currentRotation = rotationCur;
+        float targetRotation = CGeneral::LimitRadianAngle(angle);
+
         if (smooth) {
-            ped->m_fRotationDest = angle;
-            ped->m_fRotationCur = CGeneral::LimitRadianAngle(ped->m_fRotationCur);
-            float angle = ped->m_fRotationDest;
-
-            if (ped->m_fRotationCur - M_PI > ped->m_fRotationDest) {
-                angle += 2 * M_PI;
+            if (currentRotation - M_PI > targetRotation) {
+                targetRotation += 2 * M_PI;
             }
-            else if (M_PI + ped->m_fRotationCur < ped->m_fRotationDest) {
-                angle -= 2 * M_PI;
+            else if (M_PI + currentRotation < targetRotation) {
+                targetRotation -= 2 * M_PI;
             }
 
-            ped->m_fRotationCur += (angle - ped->m_fRotationCur) * 0.02f;
+            currentRotation += (targetRotation - currentRotation) * kRotationBlendFactor;
         }
         else {
-            ped->m_fRotationCur = angle;
-            ped->m_fRotationDest = angle;
-#ifdef GTA3
-            ped->m_matrix.SetRotateZOnly(ped->m_fRotationCur);
-#else
-            ped->m_placement.SetRotateZOnly(ped->m_fRotationCur);
-#endif
+            currentRotation = targetRotation;
         }
+        currentRotation = CGeneral::LimitRadianAngle(currentRotation);
+        rotationCur = currentRotation;
+#ifdef GTA3
+        ped->m_matrix.SetRotateZOnly(currentRotation);
+#else
+        static_cast<CMatrix*>(ped)->SetRotateZOnly(currentRotation);
+#endif
     }
 
     static void Clear() {
@@ -585,6 +609,7 @@ public:
         thirdPersonMouseTarget = NULL;
 
         switchTransitionSpeed = false;
+        ResetRotationState();
 
         if (!CamNew)
             CamNew = std::make_unique<CCamNew>();
@@ -625,7 +650,7 @@ public:
             case PEDSTATE_AIMGUN:
                 return m != PEDMOVE_SPRINT && ped->IsPedInControl()
 #ifdef GTAVC
-                    && (!ped->m_nPedFlags.bIsDucking || info->m_bCrouchFire)
+                    && (!ped->bIsDucking || info->m_bCrouchFire)
 #endif
                     ;
             default:
@@ -665,7 +690,7 @@ public:
 #ifndef GTA3
             case WEAPONTYPE_MINIGUN:
 #endif
-                if (ped->m_nPedFlags.bIsDucking)
+                if (ped->bIsDucking)
                     info->m_bCanAim = false;
                 else
                     info->m_bCanAim = true;
@@ -732,7 +757,7 @@ public:
 #ifndef GTA3
             case WEAPONTYPE_MINIGUN:
 #endif
-                if (ped->m_nPedFlags.bIsDucking)
+                if (ped->bIsDucking)
                     info->m_bCanAim = false;
                 else
                     info->m_bCanAim = true;
@@ -1229,7 +1254,7 @@ public:
 
         if (!pad->DisablePlayerControls && IsAbleToAim(playa) &&
 #ifdef GTA3
-        (!playa->m_nPedFlags.bIsDucking || CanDuckWithThisWeapon(weaponType)) &&
+        (!playa->bIsDucking || CanDuckWithThisWeapon(weaponType)) &&
 #endif
             pad->GetTarget() && (TheCamera.GetLookDirection() != 0) && IsWeaponPossiblyCompatible(playa) && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON)
             && currentWeapon.HasWeaponAmmoToBeUsed() && !pad->JumpJustDown() && !pad->GetSprint()) {
@@ -1300,7 +1325,7 @@ public:
                 playa->m_fFPSMoveHeading -= DegToRad(8.0f);
 
             float torsoPitch = 0.0f;
-            if (!info->m_bCanAimWithArm || playa->m_nPedFlags.bIsDucking) {
+            if (!info->m_bCanAimWithArm || playa->bIsDucking) {
                 torsoPitch = playa->m_fFPSMoveHeading;
             }
 
@@ -1344,7 +1369,7 @@ public:
                         playa->SetStoredState();
 
                     playa->m_ePedState = PEDSTATE_AIMGUN;
-                    playa->m_nPedFlags.bIsPointingGunAt = true;
+                    playa->bIsPointingGunAt = true;
                     playa->SetMoveState(PEDMOVE_STILL);
 
 #ifdef GTA3
@@ -1358,7 +1383,7 @@ public:
 #endif
 
                     CAnimBlendAssociation* assoc = NULL;
-                    if (playa->m_nPedFlags.bCrouchWhenShooting && playa->m_nPedFlags.bIsDucking) {
+                    if (playa->bCrouchWhenShooting && playa->bIsDucking) {
                         assoc = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, animToPlay2);
                     }
                     else {
@@ -1366,7 +1391,7 @@ public:
                     }
 
                     if (!assoc || assoc->m_fBlendDelta < 0.0f) {
-                        if (playa->m_nPedFlags.bCrouchWhenShooting && playa->m_nPedFlags.bIsDucking) {
+                        if (playa->bCrouchWhenShooting && playa->bIsDucking) {
                             assoc = CAnimManager::BlendAnimation(playa->m_pRwClump, groupId, animToPlay2, 4.0f);
                         }
                         else {
@@ -1381,12 +1406,12 @@ public:
 
             wasPointing = true;
 
-            if (playa->m_nPedFlags.bIsDucking && !wasCrouching) {
+            if (playa->bIsDucking && !wasCrouching) {
                 playa->m_ePedState = PEDSTATE_FIGHT;
                 wasCrouching = true;
             }
 
-            if (!playa->m_nPedFlags.bIsDucking)
+            if (!playa->bIsDucking)
                 wasCrouching = false;
         }
 
@@ -1398,7 +1423,7 @@ public:
             if (wasCrouching) {
                 if (currentWeapon.m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO && currentWeapon.m_eWeaponState != WEAPONSTATE_RELOADING &&
                     IsAbleToAim(playa)) {
-                    playa->m_nPedFlags.bCrouchWhenShooting = true;
+                    playa->bCrouchWhenShooting = true;
 #ifdef GTA3
                     CAnimManager::BlendAnimation(playa->m_pRwClump, ANIM_GROUP_MAN, ANIM_MAN_DUCK_DOWN, 4.0f);
                     SetDuck(playa);
@@ -1434,25 +1459,25 @@ public:
         if (settings.crouchKey != "NULL" && !pad->DisablePlayerControls && (mode == MODE_FOLLOW_PED || mode == MODE_AIMWEAPON) && IsAbleToAim(playa)) {
             bool duckJustDown = DuckKeyDown();
 
-            if (!playa->m_nPedFlags.bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT) {
-                playa->m_nPedFlags.bCrouchWhenShooting = true;
+            if (!playa->bIsDucking && duckJustDown && playa->m_eMoveState != PEDMOVE_SPRINT) {
+                playa->bCrouchWhenShooting = true;
                 SetDuck(playa);
             }
-            else if (playa->m_nPedFlags.bIsDucking && (duckJustDown || playa->m_eMoveState == PEDMOVE_SPRINT || pad->GetSprint() || pad->JumpJustDown() || pad->ExitVehicleJustDown() || (pad->GetWeapon() && !CanDuckWithThisWeapon(weaponType)))) {
+            else if (playa->bIsDucking && (duckJustDown || playa->m_eMoveState == PEDMOVE_SPRINT || pad->GetSprint() || pad->JumpJustDown() || pad->ExitVehicleJustDown() || (pad->GetWeapon() && !CanDuckWithThisWeapon(weaponType)))) {
                 ClearDuck(playa);
             }
 
-            if (playa->m_nPedFlags.bIsDucking && !isAiming && (!pad->GetWeapon() || playa->m_ePedState != PEDSTATE_ATTACK || !playa->m_nPedFlags.bIsAttacking)) {
+            if (playa->bIsDucking && !isAiming && (!pad->GetWeapon() || playa->m_ePedState != PEDSTATE_ATTACK || !playa->bIsAttacking)) {
                 CAnimBlendAssociation* animAssoc = RpAnimBlendClumpGetAssociation(playa->m_pRwClump, ANIM_MAN_DUCK_DOWN);
 
                 if (!animAssoc)
                     CAnimManager::BlendAnimation(playa->m_pRwClump, ANIM_GROUP_MAN, ANIM_MAN_DUCK_DOWN, 4.0f);
 
                 playa->ClearPointGunAt();
-                playa->m_nPedFlags.bIsDucking = true;
+                playa->bIsDucking = true;
             }
 
-            if (playa->m_nPedFlags.bIsDucking && currentWeapon.HasWeaponAmmoToBeUsed() && playa->m_ePedState == PEDSTATE_ATTACK && currentWeapon.m_nAmmoInClip <= 0) {
+            if (playa->bIsDucking && currentWeapon.HasWeaponAmmoToBeUsed() && playa->m_ePedState == PEDSTATE_ATTACK && currentWeapon.m_nAmmoInClip <= 0) {
                 currentWeapon.m_eWeaponState = WEAPONSTATE_RELOADING;
                 currentWeapon.Update(playa->m_nAudioEntityId);
                 currentWeapon.m_eWeaponState = WEAPONSTATE_FIRING;
@@ -1528,7 +1553,7 @@ public:
     }
 
     static void SetDuck(CPlayerPed* ped) {
-        if (ped->m_nPedFlags.bIsDucking || CTimer::m_snTimeInMilliseconds <= ped->m_nDuckTimer) {
+        if (ped->bIsDucking || CTimer::m_snTimeInMilliseconds <= ped->m_nDuckTimer) {
             if (CTimer::m_snTimeInMilliseconds + 60000 > ped->m_nDuckTimer)
                 ped->m_nDuckTimer = CTimer::m_snTimeInMilliseconds + 60000;
             return;
@@ -1537,7 +1562,7 @@ public:
         CAnimBlendAssociation* duckAssoc = RpAnimBlendClumpGetAssociation(ped->m_pRwClump, ANIM_MAN_DUCK_DOWN);
         if (!duckAssoc || duckAssoc->m_fBlendDelta < 0.0f) {
             CAnimManager::BlendAnimation(ped->m_pRwClump, ANIM_GROUP_MAN, ANIM_MAN_DUCK_DOWN, 4.0f);
-            ped->m_nPedFlags.bIsDucking = true;
+            ped->bIsDucking = true;
             ped->m_nDuckTimer = CTimer::m_snTimeInMilliseconds + 60000;
         }
     }
@@ -1556,15 +1581,15 @@ public:
             animAssoc->m_nFlags |= ASSOC_DELETEFADEDOUT;
             animAssoc->m_fBlendDelta = -4.0f;
         }
-        ped->m_nPedFlags.bIsDucking = false;
+        ped->bIsDucking = false;
 
         ped->m_nDuckTimer = 0;
-        ped->m_nPedFlags.bCrouchWhenShooting = false;
+        ped->bCrouchWhenShooting = false;
         ped->RestorePreviousState();
     }
 
     static void AdjustWeaponInfoForCrouch(CPlayerPed* ped) {
-        if (!ped->m_nPedFlags.bIsDucking)
+        if (!ped->bIsDucking)
             return;
 
         const eWeaponType weaponType = ped->m_aWeapons[ped->m_nCurrentWeapon].m_eWeaponType;

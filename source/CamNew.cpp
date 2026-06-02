@@ -212,11 +212,19 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecSource = targetCoords - cam->m_vecFront * length;
     cam->m_vecSourceBeforeLookBehind = targetCoords + cam->m_vecFront;
     
-    if (((CPed*)cam->m_pCamTargetEntity)->m_nFlags.bTouchingWater && cam->m_vecSource.z < mod_Buoyancy.m_waterlevel + 0.6f) {
+#ifdef GTA3
+    if (cam->m_pCamTargetEntity->bTouchingWater && cam->m_vecSource.z < mod_Buoyancy.m_waterlevel + 0.6f) {
+#else
+    if (cam->m_pCamTargetEntity->bIsTouchingWater && cam->m_vecSource.z < mod_Buoyancy.m_fWaterlevel + 0.6f) {
+#endif
         RwCameraSetNearClipPlane(Scene.m_pCamera, 0.2f);
 
         cam->m_vecSource = targetCoords - cam->m_vecFront * (dist * (maxDist / length)).Magnitude2D();
+#ifdef GTA3
         cam->m_vecSource.z = mod_Buoyancy.m_waterlevel + 0.6f;
+#else
+        cam->m_vecSource.z = mod_Buoyancy.m_fWaterlevel + 0.6f;
+#endif
     }
     
     targetCoords.z -= heightOffset;
@@ -224,7 +232,7 @@ void CCamNew::Process_FollowPed(CVector const& target, float targetOrient, float
     cam->m_vecTargetCoorsForFudgeInter = targetCoords;
 
     cam->m_vecFront = targetCoords - cam->m_vecSource;
-    cam->m_vecFront.Normalise();
+    NormalizeVector(cam->m_vecFront);
 
     Process_AvoidCollisions(length);
     GetVectorsReadyForRW();
@@ -259,7 +267,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 #ifdef GTA3
     CMatrix& mat = e->m_matrix;
 #else
-    CMatrix& mat = e->m_placement;
+    CMatrix& mat = *static_cast<CMatrix*>(e);
 #endif
 
     CVector vec = TransformFromObjectSpace(mat, e->GetHeading(), aimOffset);
@@ -296,7 +304,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
 
         float horShift = CGeneral::GetATanOfXY(1.0f, (TheCamera.m_f3rdPersonCHairMultX - 0.5f + TheCamera.m_f3rdPersonCHairMultX - 0.5f) * viewPlaneWidth);
         float verShift = CGeneral::GetATanOfXY(1.0f, (viewPlaneHeight * 0.0174f) * ((0.5f - TheCamera.m_f3rdPersonCHairMultY + 0.5f - TheCamera.m_f3rdPersonCHairMultY) * (1.0f / GetAspectRatio())));
-        cam->m_fHorizontalAngle = e->m_fRotationCur + (M_PI * 0.5f) + horShift;
+        cam->m_fHorizontalAngle = e->GetHeading() + (M_PI * 0.5f) + horShift;
         cam->m_fVerticalAngle = CGeneral::GetATanOfXY(Magnitude2d(distfromTarget), -distfromTarget.z) - verShift;
 
         lockMovement = true;
@@ -380,7 +388,7 @@ void CCamNew::Process_AimWeapon(CVector const& target, float targetOrient, float
     cam->m_vecTargetCoorsForFudgeInter = targetCoords;
 
     cam->m_vecFront = targetCoords - cam->m_vecSource;
-    cam->m_vecFront.Normalise();
+    NormalizeVector(cam->m_vecFront);
 
     Process_AvoidCollisions(length);
 
@@ -410,7 +418,7 @@ void CCamNew::Process_AvoidCollisions(float length) {
     CWorld::pIgnoreEntity = NULL;
     for (int i = 0; i < 5; i++) {
         if (vecEntities[i]) {
-            vecEntities[i]->m_nFlags.bIsVisible = true;
+            vecEntities[i]->bIsVisible = true;
             vecEntities[i] = NULL;
         }
 
@@ -425,12 +433,12 @@ void CCamNew::Process_AvoidCollisions(float length) {
             if (isTypePed && entity->IsVisible() && Magnitude2d((center - entity->GetPosition())) < 0.5f) {
                 if (TheCamera.m_nTransitionState == 0) {
                     vecEntities[i] = entity;
-                    entity->m_nFlags.bIsVisible = false;
+                    entity->bIsVisible = false;
                 }
             }
             else if (!isTypePed) {
                 CVector distFromPoint = gaTempSphereColPoints[0].m_vecPoint - targetCoords;
-                float frontDist = DotProduct(distFromPoint, cam->m_vecFront);
+                float frontDist = DotProduct3D(distFromPoint, cam->m_vecFront);
                 float dist = (distFromPoint - cam->m_vecFront * frontDist).Magnitude() / viewPlaneWidth;
 
                 dist = std::max(std::min(nearClip, dist), 0.1f);
@@ -448,7 +456,7 @@ void CCamNew::Process_CrouchOffset(float& offset) {
     CPed* e = static_cast<CPed*>(cam->m_pCamTargetEntity);
 
     float end = 0.0f;
-    if (e->m_nPedFlags.bIsDucking) {
+    if (e->bIsDucking) {
         float f = settings.modernCamera ? maxFOVModern : maxFOV;
 
         end = -0.5f;
@@ -464,13 +472,13 @@ void CCamNew::GetVectorsReadyForRW() {
 
     CVector right;
     cam->m_vecUp = CVector(0.0f, 0.0f, 1.0f);
-    cam->m_vecFront.Normalise();
+    NormalizeVector(cam->m_vecFront);
     if (cam->m_vecFront.x == 0.0f && cam->m_vecFront.y == 0.0f) {
         cam->m_vecFront.x = 0.0001f;
         cam->m_vecFront.y = 0.0001f;
     }
     right = CrossProduct(cam->m_vecFront, cam->m_vecUp);
-    right.Normalise();
+    NormalizeVector(right);
     cam->m_vecUp = CrossProduct(right, cam->m_vecFront);
 }
 

@@ -1,0 +1,81 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [ReleaseIII, ReleaseVC]
+
+    env:
+      PLUGIN_SDK_DIR: ${{ github.workspace }}\plugin-sdk
+      DXSDK_DIR: C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Checkout plugin-sdk (includes rwsdk)
+        uses: actions/checkout@v6
+        with:
+          repository: DK22Pac/plugin-sdk
+          path: plugin-sdk
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Prepare VC compatibility header (only if missing)
+        shell: pwsh
+        run: |
+          $vcHeader = Join-Path $env:PLUGIN_SDK_DIR "plugin_vc\game_vc\RpAnimBlend.h"
+          if (-not (Test-Path $vcHeader)) {
+            @(
+              '#pragma once'
+              ''
+              '#include "RenderWare.h"'
+              '#include "CAnimBlendAssociation.h"'
+              ''
+              'CAnimBlendAssociation* RpAnimBlendClumpGetAssociation(RpClump* clump, unsigned int animId);'
+            ) | Set-Content -Path $vcHeader
+          }
+
+      - name: Build plugin-sdk static libraries
+        shell: pwsh
+        run: |
+          Push-Location plugin-sdk\tools\premake
+          .\premake5.exe vs2022
+          Pop-Location
+          msbuild plugin-sdk\plugin.sln /m /p:Configuration=Release
+
+      - name: Generate VS2022 solution with Premake
+        shell: pwsh
+        run: .\premake5.bat
+
+      - name: Build ${{ matrix.configuration }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path scripts
+          msbuild project_files\classic-axis.sln `
+            /m `
+            /p:Configuration=${{ matrix.configuration }} `
+            /p:Platform=Win32 `
+            /p:GTA_III_DIR="${{ github.workspace }}" `
+            /p:GTA_VC_DIR="${{ github.workspace }}"
+
+      - name: Upload ASI artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: classic-axis-${{ matrix.configuration }}
+          path: output/asi/*.asi
+          if-no-files-found: error

@@ -12,6 +12,8 @@
 #define isNearlyEqualF(a, b, t) (fabs(a - b) <= t)
 #define arraySize(array) (sizeof(array) / sizeof(array[0]))
 
+constexpr float kNormalizeEpsilon = 1.0e-6f;
+
 static float DegToRad(float x) {
     return (x * M_PI / 180.0f);
 }
@@ -43,6 +45,20 @@ static CVector CrossProduct(const CVector& v1, const CVector& v2) {
     return CVector(v1.y * v2.z - v1.z * v2.y,
         v1.z * v2.x - v1.x * v2.z,
         v1.x * v2.y - v1.y * v2.x);
+}
+
+static float DotProduct3D(const CVector& v1, const CVector& v2) {
+    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+static void NormalizeVector(CVector& v) {
+    float length = v.Magnitude();
+    if (length > kNormalizeEpsilon) {
+        float invLength = 1.0f / length;
+        v.x *= invLength;
+        v.y *= invLength;
+        v.z *= invLength;
+    }
 }
 
 static float Magnitude2d(CVector v) {
